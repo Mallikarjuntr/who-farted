@@ -130,6 +130,8 @@ type GameProps = {
   practice?: boolean;
   onPracticeDone?: () => void;
   onPracticeRetry?: () => void;
+  /** Whether the player already posted their verdict comment on this case. */
+  commented?: boolean;
 };
 
 const Game = ({
@@ -138,6 +140,7 @@ const Game = ({
   practice = false,
   onPracticeDone,
   onPracticeRetry,
+  commented = false,
 }: GameProps) => {
   const analysis = useMemo(() => analyzeCase(c), [c]);
   const indexOf = useCallback(
@@ -309,7 +312,7 @@ const Game = ({
   };
 
   if (result) {
-    return <Result c={c} result={result} />;
+    return <Result c={c} result={result} commented={commented} />;
   }
 
   if (practiceLost) {
@@ -739,6 +742,7 @@ export const App = () => {
         key={`real-${data.case.id}-${reloadKey}`}
         c={data.case}
         initialResult={data.result}
+        commented={data.commented}
       />
     </>
   );

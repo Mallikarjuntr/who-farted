@@ -48,6 +48,7 @@ createServer(async (req, res) => {
       },
       playersSoFar: 0,
       testMode: true,
+      commented: false,
     };
     res
       .writeHead(200, { 'Content-Type': 'application/json' })
@@ -79,6 +80,12 @@ createServer(async (req, res) => {
     res
       .writeHead(200, { 'Content-Type': 'application/json' })
       .end(JSON.stringify({ type: 'accuse', result }));
+    return;
+  }
+  if (url.pathname === '/api/comment' && req.method === 'POST') {
+    res
+      .writeHead(200, { 'Content-Type': 'application/json' })
+      .end(JSON.stringify({ type: 'comment', alreadyPosted: false }));
     return;
   }
   if (url.pathname === '/api/test/reset' || url.pathname === '/api/reset') {

@@ -1,4 +1,4 @@
-import { context, redis } from '@devvit/web/server';
+import { context, reddit, redis } from '@devvit/web/server';
 import type {
   AccuseRequest,
   AccuseResult,
@@ -71,6 +71,7 @@ const keys = {
   played: (date: string) => `played:${date}`,
   blame: (date: string) => `blame:${date}`,
   streak: (userId: string) => `streak:${userId}`,
+  commented: (date: string) => `commented:${date}`,
 };
 
 export async function readBlame(
@@ -264,8 +265,85 @@ export async function resetPlay(
     return;
   }
   await redis.hDel(keys.played(date), [userId]);
+  await redis.hDel(keys.commented(date), [userId]);
   const count = await redis.hIncrBy(keys.blame(date), play.guessed, -1);
   if (count < 0) {
     await redis.hSet(keys.blame(date), { [play.guessed]: '0' });
+  }
+}
+
+export async function hasCommented(
+  date: string,
+  userId: string | undefined
+): Promise<boolean> {
+  if (!userId) {
+    return false;
+  }
+  return Boolean(await redis.hGet(keys.commented(date), userId));
+}
+
+function clock(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** The spoiler-free verdict a player can post under the case. */
+export function verdictText(c: CaseFile, result: AccuseResult): string {
+  const lines = [`**Who Farted? Case #${c.number}**`];
+  if (result.correct) {
+    const parts = [
+      `Cracked it in ${clock(result.seconds)}`,
+      `${result.cluesRead}/${c.suspects.length} clues`,
+    ];
+    if (result.hints > 0) {
+      parts.push(`${result.hints} hint${result.hints === 1 ? '' : 's'}`);
+    }
+    if (result.streak) {
+      parts.push(
+        `streak ${result.streak.current} day${result.streak.current === 1 ? '' : 's'}`
+      );
+    }
+    lines.push(parts.join(' · '));
+  } else {
+    lines.push(
+      `The farter got away from me this time (${clock(result.seconds)}). Back tomorrow!`
+    );
+  }
+  lines.push('*No spoilers. Can you find the farter?*');
+  return lines.join('\n\n');
+}
+
+export type CommentOutcome = 'posted' | 'already' | 'not-played' | 'no-user';
+
+/**
+ * Posts the player's verdict as a comment on the case post. Only ever called
+ * from an explicit button press; one comment per player per case.
+ */
+export async function postVerdictComment(
+  date: string
+): Promise<CommentOutcome> {
+  const { userId, postId } = context;
+  if (!userId || !postId) {
+    return 'no-user';
+  }
+  const result = await readResult(date, userId);
+  if (!result) {
+    return 'not-played';
+  }
+  const claimed = await redis.hSetNX(keys.commented(date), userId, 'pending');
+  if (!claimed) {
+    return 'already';
+  }
+  try {
+    const comment = await reddit.submitComment({
+      id: postId,
+      text: verdictText(getCase(date), result),
+      runAs: 'USER',
+    });
+    await redis.hSet(keys.commented(date), { [userId]: comment.id });
+    return 'posted';
+  } catch (error) {
+    await redis.hDel(keys.commented(date), [userId]);
+    throw error;
   }
 }

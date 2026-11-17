@@ -1,14 +1,15 @@
 import { showToast } from '@devvit/web/client';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { AccuseResult } from '../../shared/api';
 import type { PublicCase } from '../../shared/puzzle/types';
 import { CAST, FOODS } from '../../shared/puzzle/cast';
 import { FOOD_COLORS, confession } from '../lib/clues';
+import { postComment } from '../lib/api';
 import { formatTime, untilNextCase } from '../lib/util';
 import { SolveSteps } from './SolveSteps';
 import { Suspect } from './Suspect';
 
-type Props = { c: PublicCase; result: AccuseResult };
+type Props = { c: PublicCase; result: AccuseResult; commented: boolean };
 
 function burstPath(): string {
   const cx = 130;
@@ -25,7 +26,25 @@ function burstPath(): string {
 
 const BURST = burstPath();
 
-export const Result = ({ c, result }: Props) => {
+export const Result = ({ c, result, commented }: Props) => {
+  const [comment, setComment] = useState<'idle' | 'posting' | 'posted'>(
+    commented ? 'posted' : 'idle'
+  );
+
+  const postVerdict = async () => {
+    setComment('posting');
+    try {
+      await postComment(c.id);
+      setComment('posted');
+      showToast('Verdict posted! Scroll down to see it in the comments.');
+    } catch (err) {
+      setComment('idle');
+      showToast(
+        err instanceof Error ? err.message : 'Could not post. Try again.'
+      );
+    }
+  };
+
   const culpritFood =
     result.lunches.find((l) => l.id === result.culprit)?.food ?? null;
   const total = Math.max(result.totalPlayers, 1);
@@ -226,11 +245,37 @@ export const Result = ({ c, result }: Props) => {
 
         <button
           type="button"
-          className="btn display w-full rounded-xl bg-tomato py-2.5 text-[21px]"
-          onClick={() => void copyVerdict()}
+          className="btn display flex w-full items-center justify-center gap-2 rounded-xl bg-tomato py-2.5 text-[21px] disabled:bg-mint disabled:opacity-100"
+          disabled={comment !== 'idle'}
+          onClick={() => void postVerdict()}
         >
-          COPY MY VERDICT
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M5 6h14v9H10l-4 3v-3H5z"
+              fill="none"
+              stroke="#141414"
+              strokeWidth="2.2"
+              strokeLinejoin="round"
+            />
+          </svg>
+          {comment === 'posted'
+            ? 'VERDICT POSTED ✓'
+            : comment === 'posting'
+              ? 'POSTING…'
+              : 'POST MY VERDICT'}
         </button>
+        <p className="m-0 -mt-1 text-center text-[12.5px] text-ink-soft">
+          {comment === 'posted'
+            ? 'Your verdict is in the comments below. No spoilers.'
+            : 'Posts a comment from your Reddit account. No spoilers.'}{' '}
+          <button
+            type="button"
+            className="tap border-0 bg-transparent p-0 text-[12.5px] font-bold text-ink underline"
+            onClick={() => void copyVerdict()}
+          >
+            Copy instead
+          </button>
+        </p>
         <p className="m-0 text-[12.5px] font-medium">
           Next elevator in {untilNextCase()}
         </p>

@@ -38,5 +38,22 @@
   },
   "dev": {
     "subreddit": "who_farted_daily_dev"
+  },
+  "scheduler": {
+    "tasks": {
+      "daily-case": {
+        "endpoint": "/internal/scheduler/daily-case",
+        "cron": "0 0 * * *"
+      }
+    }
+  },
+  "permissions": {
+    "redis": true,
+    "reddit": {
+      "enable": true,
+      "asUser": [
+        "SUBMIT_COMMENT"
+      ]
+    }
   }
 }

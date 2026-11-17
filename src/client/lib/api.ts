@@ -2,6 +2,7 @@ import type {
   AccuseRequest,
   AccuseResponse,
   CaseResponse,
+  CommentResponse,
   ErrorResponse,
   ResetResponse,
 } from '../../shared/api';
@@ -47,6 +48,20 @@ export async function resetPlay(date: string): Promise<ResetResponse> {
     body: JSON.stringify({ date }),
   });
   const data: ResetResponse | ErrorResponse = await res.json();
+  if (!res.ok || isError(data)) {
+    throw new Error(isError(data) ? data.message : `HTTP ${res.status}`);
+  }
+  return data;
+}
+
+/** Posts the spoiler-free verdict as a comment. Only called from the explicit button. */
+export async function postComment(date: string): Promise<CommentResponse> {
+  const res = await fetch('/api/comment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date }),
+  });
+  const data: CommentResponse | ErrorResponse = await res.json();
   if (!res.ok || isError(data)) {
     throw new Error(isError(data) ? data.message : `HTTP ${res.status}`);
   }
