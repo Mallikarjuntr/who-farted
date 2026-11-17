@@ -122,7 +122,7 @@ export const Splash = () => {
           ) : (
             <p className="m-0 text-[13px] leading-tight font-bold">
               6 suspects.
-              <br />1 accusation.
+              <br />1 guess.
             </p>
           )}
           <button

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { CaseFile } from '../shared/puzzle/types.ts';
 import { createWorldSpace, evaluate } from '../shared/puzzle/logic.ts';
+import { explainSolution } from '../shared/puzzle/explain.ts';
 import {
   LAUNCH_DATE,
   caseNumberFor,
@@ -146,5 +147,21 @@ void test('clue text is complete and never leaks the answer field', () => {
     }
     const pub = toPublicCase(c);
     assert.ok(!('solution' in pub) && !('stats' in pub));
+  }
+});
+
+void test('the "how to solve it" steps always end with only the culprit left', () => {
+  for (const c of cases) {
+    const pub = toPublicCase(c);
+    const steps = explainSolution(pub, c.solution.culprit);
+    assert.ok(steps.length >= 2, `case ${c.id} has too few steps`);
+    const ruledOut = new Set(steps.flatMap((s) => s.ruledOut));
+    for (const s of c.suspects) {
+      assert.equal(
+        ruledOut.has(s.id),
+        s.id !== c.solution.culprit,
+        `case ${c.id} ${s.id}`
+      );
+    }
   }
 });

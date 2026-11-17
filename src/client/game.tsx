@@ -19,6 +19,7 @@ import {
 } from '../shared/puzzle/solver';
 import { Lift } from './components/Lift';
 import { Result } from './components/Result';
+import { SolveSteps } from './components/SolveSteps';
 import { Suspect } from './components/Suspect';
 import { fetchCase, postAccuse, resetPlay } from './lib/api';
 import { TestBar } from './components/TestBar';
@@ -64,10 +65,10 @@ const Rules = ({
           <strong>1. Tap a person.</strong> Read their clue.
         </li>
         <li>
-          <strong>2. Cross out</strong> people who are NOT the farter.
+          <strong>2. Mark the innocent</strong> people. This is NOT your guess.
         </li>
         <li>
-          <strong>3. Pick the farter.</strong> You get one try.
+          <strong>3. Tap GUESS THE FARTER.</strong> You get ONE guess.
         </li>
         {liarMode && (
           <li className="sticker-sm rounded-lg bg-sun px-2 py-1.5">
@@ -128,6 +129,7 @@ type GameProps = {
   initialResult: AccuseResult | null;
   practice?: boolean;
   onPracticeDone?: () => void;
+  onPracticeRetry?: () => void;
 };
 
 const Game = ({
@@ -135,6 +137,7 @@ const Game = ({
   initialResult,
   practice = false,
   onPracticeDone,
+  onPracticeRetry,
 }: GameProps) => {
   const analysis = useMemo(() => analyzeCase(c), [c]);
   const indexOf = useCallback(
@@ -164,10 +167,11 @@ const Game = ({
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<AccuseResult | null>(initialResult);
   const [practiceWon, setPracticeWon] = useState(false);
+  const [practiceLost, setPracticeLost] = useState<SuspectId | null>(null);
   const [seconds, setSeconds] = useState(0);
   const startRef = useRef<number | null>(null);
 
-  const playing = !showRules && !result && !practiceWon;
+  const playing = !showRules && !result && !practiceWon && !practiceLost;
 
   useEffect(() => {
     if (!playing) {
@@ -222,7 +226,7 @@ const Game = ({
       window.setTimeout(() => setShaking(null), 400);
       setNote({
         tone: 'warn',
-        text: `“Prove it!” No clue clears ${CAST[id].name} yet. Read more clues.`,
+        text: `“Prove it!” No clue proves ${CAST[id].name} is innocent yet. Read more clues.`,
       });
       return;
     }
@@ -232,9 +236,12 @@ const Game = ({
       left.length === 1 && left[0]
         ? {
             tone: 'good',
-            text: `Only ${CAST[left[0].id].name} is left. Tap J’ACCUSE!`,
+            text: `Only ${CAST[left[0].id].name} is left. Tap GUESS THE FARTER!`,
           }
-        : { tone: 'good', text: `${CAST[id].name} is NOT the farter.` }
+        : {
+            tone: 'good',
+            text: `Correct! The clues prove ${CAST[id].name} is innocent.`,
+          }
     );
   };
 
@@ -246,7 +253,7 @@ const Game = ({
     if (clearable) {
       setNote({
         tone: 'info',
-        text: `You can cross out ${CAST[clearable.id].name} now.`,
+        text: `You can mark ${CAST[clearable.id].name} innocent now.`,
       });
       return;
     }
@@ -263,7 +270,7 @@ const Game = ({
       tone: 'info',
       text:
         left.length === 1
-          ? 'Only one person fits every clue. Accuse them!'
+          ? 'Only one person fits every clue. Guess them!'
           : c.liarMode
             ? 'Two clues can’t both be true. One of them is the farter’s lie.'
             : 'Use a food clue about the farter with a food clue about a person.',
@@ -277,10 +284,7 @@ const Game = ({
       if (id === PRACTICE_CULPRIT) {
         setPracticeWon(true);
       } else {
-        setNote({
-          tone: 'warn',
-          text: `Not ${CAST[id].name}. Look at the clues again.`,
-        });
+        setPracticeLost(id);
       }
       return;
     }
@@ -306,6 +310,38 @@ const Game = ({
 
   if (result) {
     return <Result c={c} result={result} />;
+  }
+
+  if (practiceLost) {
+    return (
+      <div className="halftone min-h-full p-4">
+        <div className="sticker pop mx-auto flex w-full max-w-[400px] flex-col items-center gap-3 rounded-2xl bg-white p-4 text-center">
+          <h1 className="logo m-0 text-[38px] leading-none">WRONG GUESS!</h1>
+          <p className="m-0 text-[15px] font-bold">
+            It was Biscuit, not {CAST[practiceLost].name}. In the real game,
+            that means game over.
+          </p>
+          <div className="w-full text-left">
+            <p className="display m-0 mb-1.5 text-[15px]">HOW TO SOLVE IT</p>
+            <SolveSteps c={c} culprit={PRACTICE_CULPRIT} />
+          </div>
+          <button
+            type="button"
+            className="btn display w-full rounded-xl bg-sun py-2 text-[20px]"
+            onClick={onPracticeRetry}
+          >
+            TRY PRACTICE AGAIN
+          </button>
+          <button
+            type="button"
+            className="btn w-full rounded-xl bg-white py-2 text-[15px] font-bold"
+            onClick={onPracticeDone}
+          >
+            Start today’s case
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (practiceWon) {
@@ -433,8 +469,8 @@ const Game = ({
               onClick={() => toggleCross(selected)}
             >
               {crossed.has(selected)
-                ? `Undo: bring ${CAST[selected].name} back`
-                : `CROSS OUT ${CAST[selected].name.toUpperCase()}`}
+                ? `Undo: unmark ${CAST[selected].name}`
+                : `✗ MARK ${CAST[selected].name.toUpperCase()} INNOCENT`}
             </button>
           </section>
         ) : (
@@ -502,10 +538,10 @@ const Game = ({
           </button>
           <button
             type="button"
-            className="btn display h-[54px] flex-1 rounded-xl bg-tomato text-[24px]"
+            className="btn display h-[54px] flex-1 rounded-xl bg-tomato text-[22px]"
             onClick={() => setAccusing(true)}
           >
-            J’ACCUSE!
+            GUESS THE FARTER
           </button>
         </div>
       </div>
@@ -522,13 +558,9 @@ const Game = ({
               <div className="flex flex-col items-center gap-2 text-center">
                 <Suspect id={confirm} mood="shifty" className="h-28 w-auto" />
                 <h2 id="accuse-title" className="display m-0 text-[24px]">
-                  {CAST[confirm].name.toUpperCase()} DID IT?
+                  IS IT {CAST[confirm].name.toUpperCase()}?
                 </h2>
-                <p className="m-0 text-[15px]">
-                  {practice
-                    ? 'Are you sure?'
-                    : 'You get one try. Are you sure?'}
-                </p>
+                <p className="m-0 text-[15px]">You only get ONE guess!</p>
                 <div className="mt-2 flex w-full gap-2">
                   <button
                     type="button"
@@ -544,7 +576,9 @@ const Game = ({
                     onClick={() => void sendAccusation(confirm)}
                     disabled={sending}
                   >
-                    {sending ? '…' : 'YES!'}
+                    {sending
+                      ? '…'
+                      : `YES, IT’S ${CAST[confirm].name.toUpperCase()}!`}
                   </button>
                 </div>
               </div>
@@ -602,6 +636,7 @@ export const App = () => {
   const [testDate, setTestDate] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [practiceRun, setPracticeRun] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -680,11 +715,12 @@ export const App = () => {
       <>
         {testBar}
         <Game
-          key="practice"
+          key={`practice-${practiceRun}`}
           c={PRACTICE_CASE}
           initialResult={null}
           practice
           onPracticeDone={finishIntro}
+          onPracticeRetry={() => setPracticeRun((n) => n + 1)}
         />
       </>
     );

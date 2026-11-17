@@ -75,13 +75,13 @@ export function coachStep(
   }
   if (!crossed.has('pip')) {
     return {
-      text: 'Agnes says the farter was on the RIGHT. Pip is on the LEFT, so Pip is NOT the farter. Tap PIP, then tap CROSS OUT.',
+      text: 'Agnes says the farter was on the RIGHT. Pip is on the LEFT, so Pip is NOT the farter. Tap PIP, then tap MARK INNOCENT.',
       target: 'pip',
     };
   }
   if (!crossed.has('brock')) {
     return {
-      text: 'Brock is on the LEFT too. Tap BROCK, then tap CROSS OUT.',
+      text: 'Brock is on the LEFT too. Tap BROCK, then tap MARK INNOCENT.',
       target: 'brock',
     };
   }
@@ -90,12 +90,12 @@ export function coachStep(
   }
   if (!crossed.has('agnes')) {
     return {
-      text: 'Pip’s clue says AGNES is NOT the farter. Tap AGNES, then tap CROSS OUT.',
+      text: 'Pip’s clue says AGNES is NOT the farter. Tap AGNES, then tap MARK INNOCENT.',
       target: 'agnes',
     };
   }
   return {
-    text: 'Only BISCUIT is left. Tap J’ACCUSE! and pick Biscuit.',
+    text: 'Only BISCUIT is left. Tap GUESS THE FARTER and pick Biscuit.',
     target: null,
   };
 }

@@ -103,7 +103,7 @@ export const Lift = ({
                 type="button"
                 onClick={() => onSelect(s.id)}
                 aria-pressed={isSelected}
-                aria-label={`${CAST[s.id].name}, ${ROW_LABELS[row]} ${COL_LABELS[col]}${isCrossed ? ', crossed out' : ''}${isRead ? '' : ', clue not read yet'}`}
+                aria-label={`${CAST[s.id].name}, ${ROW_LABELS[row]} ${COL_LABELS[col]}${isCrossed ? ', marked innocent' : ''}${isRead ? '' : ', clue not read yet'}`}
                 className={`tap relative flex flex-col items-center rounded-xl border-0 p-0.5 pb-1 ${zoneClass} ${
                   isSelected ? 'bg-sun/70' : 'bg-transparent'
                 } ${pulse === s.id ? 'coach-pulse' : ''}`}

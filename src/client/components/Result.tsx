@@ -5,6 +5,7 @@ import type { PublicCase } from '../../shared/puzzle/types';
 import { CAST, FOODS } from '../../shared/puzzle/cast';
 import { FOOD_COLORS, confession } from '../lib/clues';
 import { formatTime, untilNextCase } from '../lib/util';
+import { SolveSteps } from './SolveSteps';
 import { Suspect } from './Suspect';
 
 type Props = { c: PublicCase; result: AccuseResult };
@@ -70,7 +71,7 @@ export const Result = ({ c, result }: Props) => {
           CASE #{c.number} · FLOOR {c.floor} · CLOSED
         </span>
         <h1 className="logo pop m-0 -rotate-3 text-center text-[52px] leading-none">
-          {result.correct ? 'GOTCHA!' : 'IT GOT AWAY!'}
+          {result.correct ? 'GOTCHA!' : 'WRONG GUESS!'}
         </h1>
 
         <div className="relative flex h-[214px] w-[260px] items-end justify-center">
@@ -101,10 +102,20 @@ export const Result = ({ c, result }: Props) => {
           “{confession(result.culprit, culpritFood)}”
         </p>
         {!result.correct && (
-          <p className="sticker-sm m-0 rounded-lg bg-pink px-2 py-1 text-center text-[13.5px] font-bold">
-            You accused {CAST[result.guessed].name}. {CAST[result.guessed].name}{' '}
-            is innocent.
-          </p>
+          <>
+            <p className="sticker-sm m-0 rounded-lg bg-pink px-2 py-1 text-center text-[15px] font-bold">
+              It was {CAST[result.culprit].name}, not{' '}
+              {CAST[result.guessed].name}.
+            </p>
+            <p className="m-0 text-center text-[14px] font-medium">
+              So close! Only {rightPct}% got it today. See you tomorrow,
+              detective.
+            </p>
+            <section className="sticker w-full rounded-2xl bg-white px-3 py-2.5">
+              <p className="display m-0 mb-1.5 text-[15px]">HOW TO SOLVE IT</p>
+              <SolveSteps c={c} culprit={result.culprit} />
+            </section>
+          </>
         )}
 
         <div className="flex w-full justify-center gap-2.5">
@@ -144,7 +155,7 @@ export const Result = ({ c, result }: Props) => {
                     className="w-fit rounded-sm border border-ink px-1 text-[10px] font-bold whitespace-nowrap uppercase"
                     style={{ background: FOOD_COLORS[l.food] }}
                   >
-                    {FOODS[l.food].short}
+                    {FOODS[l.food].tag}
                   </span>
                 </span>
               </div>
@@ -201,6 +212,17 @@ export const Result = ({ c, result }: Props) => {
             {verdict}
           </p>
         </section>
+
+        {result.correct && (
+          <details className="w-full rounded-2xl border-2 border-ink bg-white px-3 py-2">
+            <summary className="tap text-[14px] font-bold">
+              See how to solve it
+            </summary>
+            <div className="mt-2">
+              <SolveSteps c={c} culprit={result.culprit} />
+            </div>
+          </details>
+        )}
 
         <button
           type="button"
