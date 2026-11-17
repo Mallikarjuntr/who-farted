@@ -12,6 +12,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "resolveJsonModule": true,
+    "rewriteRelativeImportExtensions": true,
     "strict": true,
     "types": [],
     "isolatedModules": true,
