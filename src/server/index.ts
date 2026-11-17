@@ -5,6 +5,7 @@ import { api } from './routes/api';
 import { menu } from './routes/menu';
 import { triggers } from './routes/triggers';
 import { scheduler } from './routes/scheduler.ts';
+import { telemetryRoutes } from './routes/telemetry.ts';
 
 const app = new Hono();
 const internal = new Hono();
@@ -13,6 +14,7 @@ internal.route('/menu', menu);
 internal.route('/triggers', triggers);
 internal.route('/scheduler', scheduler);
 
+app.route('/api/telemetry', telemetryRoutes);
 app.route('/api', api);
 app.route('/internal', internal);
 

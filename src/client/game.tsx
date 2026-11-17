@@ -24,6 +24,13 @@ import { Suspect } from './components/Suspect';
 import { fetchCase, postAccuse, resetPlay } from './lib/api';
 import { TestBar } from './components/TestBar';
 import {
+  trackAction,
+  trackClue,
+  trackEnd,
+  trackReady,
+  trackStart,
+} from './lib/analytics';
+import {
   FOOD_COLORS,
   groupFacts,
   lunchTags,
@@ -176,6 +183,13 @@ const Game = ({
 
   const playing = !showRules && !result && !practiceWon && !practiceLost;
 
+  // Analytics: the real case is loaded and playable.
+  useEffect(() => {
+    if (!practice && !initialResult) {
+      trackReady();
+    }
+  }, [practice, initialResult]);
+
   useEffect(() => {
     if (!playing) {
       return;
@@ -192,6 +206,10 @@ const Game = ({
   const select = (id: SuspectId) => {
     setSelected(id);
     setNote(null);
+    if (!practice && !read.has(id)) {
+      trackStart();
+      trackClue(read.size + 1, c.suspects.length);
+    }
     setRead((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
   };
 
@@ -225,6 +243,9 @@ const Game = ({
       return;
     }
     if (!isProvenInnocent(analysis, readIndexes, id)) {
+      if (!practice) {
+        trackAction('prove_it_blocked');
+      }
       setShaking(id);
       window.setTimeout(() => setShaking(null), 400);
       setNote({
@@ -232,6 +253,9 @@ const Game = ({
         text: `“Prove it!” No clue proves ${CAST[id].name} is innocent yet. Read more clues.`,
       });
       return;
+    }
+    if (!practice) {
+      trackAction('mark_innocent');
     }
     setCrossed((prev) => new Set(prev).add(id));
     const left = c.suspects.filter((s) => s.id !== id && !crossed.has(s.id));
@@ -250,6 +274,9 @@ const Game = ({
 
   const hint = () => {
     setHints((h) => h + 1);
+    if (!practice) {
+      trackAction('hint');
+    }
     const clearable = c.suspects.find(
       (s) => !crossed.has(s.id) && isProvenInnocent(analysis, readIndexes, s.id)
     );
@@ -300,6 +327,7 @@ const Game = ({
         cluesRead: read.size,
         hints,
       });
+      trackEnd(res.result.correct, seconds, read.size);
       setResult(res.result);
       setAccusing(false);
       setConfirm(null);
@@ -394,7 +422,12 @@ const Game = ({
               type="button"
               aria-label="How to play"
               className="btn display h-9 w-9 rounded-full bg-white text-[18px]"
-              onClick={() => setShowRules(true)}
+              onClick={() => {
+                if (!practice) {
+                  trackAction('open_rules');
+                }
+                setShowRules(true);
+              }}
             >
               ?
             </button>
@@ -542,7 +575,12 @@ const Game = ({
           <button
             type="button"
             className="btn display h-[54px] flex-1 rounded-xl bg-tomato text-[22px]"
-            onClick={() => setAccusing(true)}
+            onClick={() => {
+              if (!practice) {
+                trackAction('open_guess');
+              }
+              setAccusing(true);
+            }}
           >
             GUESS THE FARTER
           </button>

@@ -4,6 +4,8 @@ import type { AccuseResult } from '../../shared/api';
 import type { PublicCase } from '../../shared/puzzle/types';
 import { CAST, FOODS } from '../../shared/puzzle/cast';
 import { FOOD_COLORS, confession } from '../lib/clues';
+import { badgeFor, nextBadge } from '../../shared/badges';
+import { trackAction } from '../lib/analytics';
 import { postComment } from '../lib/api';
 import { formatTime, untilNextCase } from '../lib/util';
 import { SolveSteps } from './SolveSteps';
@@ -27,6 +29,8 @@ function burstPath(): string {
 const BURST = burstPath();
 
 export const Result = ({ c, result, commented }: Props) => {
+  const badge = badgeFor(result.streak?.current ?? 0);
+  const next = nextBadge(result.streak?.current ?? 0);
   const [comment, setComment] = useState<'idle' | 'posting' | 'posted'>(
     commented ? 'posted' : 'idle'
   );
@@ -36,6 +40,7 @@ export const Result = ({ c, result, commented }: Props) => {
     try {
       await postComment(c.id);
       setComment('posted');
+      trackAction('post_verdict');
       showToast('Verdict posted! Scroll down to see it in the comments.');
     } catch (err) {
       setComment('idle');
@@ -159,6 +164,26 @@ export const Result = ({ c, result, commented }: Props) => {
             </p>
           </div>
         </div>
+
+        {result.streak && (
+          <section className="sticker-sm flex w-full items-center gap-2.5 rounded-2xl bg-white px-3 py-2">
+            <span
+              className="rounded-md border-2 border-ink px-2 py-0.5 text-[13px] font-bold whitespace-nowrap"
+              style={{
+                background: badge.background,
+                color: badge.textColor === 'light' ? '#ffffff' : '#141414',
+              }}
+            >
+              {badge.text}
+            </span>
+            <span className="text-[12.5px] leading-tight text-ink-soft">
+              Your badge, shown next to your name here.
+              {next
+                ? ` ${next.daysToGo} more day${next.daysToGo === 1 ? '' : 's'} to ${next.title}.`
+                : ' Top rank!'}
+            </span>
+          </section>
+        )}
 
         <section className="sticker w-full rounded-2xl bg-white px-3 py-2.5">
           <p className="display m-0 text-[15px]">WHO ATE WHAT</p>

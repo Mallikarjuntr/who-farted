@@ -54,6 +54,7 @@
       "asUser": [
         "SUBMIT_COMMENT"
       ]
-    }
+    },
+    "journeys": true
   }
 }

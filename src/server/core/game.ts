@@ -9,6 +9,7 @@ import type {
 import type { CaseFile, SuspectId } from '../../shared/puzzle/types.ts';
 import { SUSPECT_IDS } from '../../shared/puzzle/cast.ts';
 import { generateCase } from '../../shared/puzzle/generator.ts';
+import { badgeFor } from '../../shared/badges.ts';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -226,8 +227,30 @@ export async function accuse(
   }
   await redis.hIncrBy(keys.blame(date), play.guessed, 1);
   const streak = await bumpStreak(userId, date, play.correct);
+  await updateStreakFlair(streak.current);
   const blame = await readBlame(date);
   return { ...play, blame: blame.rows, totalPlayers: blame.total, streak };
+}
+
+/** Shows the player's streak title next to their name in this subreddit. */
+async function updateStreakFlair(current: number): Promise<void> {
+  const { username, subredditName } = context;
+  if (!username || !subredditName) {
+    return;
+  }
+  const badge = badgeFor(current);
+  try {
+    await reddit.setUserFlair({
+      subredditName,
+      username,
+      text: badge.text,
+      backgroundColor: badge.background,
+      textColor: badge.textColor,
+    });
+  } catch (error) {
+    // Flair is a bonus; never let it break the game.
+    console.error('Could not set streak flair', error);
+  }
 }
 
 export async function yesterdaySummary(
