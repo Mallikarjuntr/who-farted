@@ -14,7 +14,8 @@
     "prettier": "prettier --write .",
     "test:types": "tsc --build",
     "test:unit": "node --experimental-strip-types --no-warnings=ExperimentalWarning --test \"src/**/*.test.ts\"",
-    "preview:cases": "node --experimental-strip-types --no-warnings=ExperimentalWarning scripts/preview-cases.ts"
+    "preview:cases": "node --experimental-strip-types --no-warnings=ExperimentalWarning scripts/preview-cases.ts",
+    "preview:local": "node --experimental-strip-types --no-warnings=ExperimentalWarning scripts/local-preview.ts"
   },
   "engines": {
     "node": ">=24.0.0"
@@ -22,6 +23,8 @@
   "dependencies": {
     "@devvit/start": "0.15.3",
     "@devvit/web": "0.15.3",
+    "@fontsource-variable/rubik": "^5.3.0",
+    "@fontsource/luckiest-guy": "^5.3.0",
     "@hono/node-server": "2.1.6",
     "devvit": "0.15.3",
     "hono": "4.13.17",

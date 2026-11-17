@@ -1,93 +1,83 @@
 import { Hono } from 'hono';
-import { context, redis, reddit } from '@devvit/web/server';
+import { context } from '@devvit/web/server';
 import type {
-  DecrementResponse,
-  IncrementResponse,
-  InitResponse,
-} from '../../shared/api';
-
-type ErrorResponse = {
-  status: 'error';
-  message: string;
-};
+  AccuseResponse,
+  CaseResponse,
+  ErrorResponse,
+} from '../../shared/api.ts';
+import { toPublicCase } from '../../shared/puzzle/generator.ts';
+import {
+  accuse,
+  caseDateForPost,
+  getCase,
+  isSuspectId,
+  readBlame,
+  readResult,
+  readStreak,
+  yesterdaySummary,
+} from '../core/game.ts';
 
 export const api = new Hono();
 
-api.get('/init', async (c) => {
-  const { postId } = context;
-
-  if (!postId) {
-    console.error('API Init Error: postId not found in devvit context');
-    return c.json<ErrorResponse>(
-      {
-        status: 'error',
-        message: 'postId is required but missing from context',
-      },
-      400
-    );
-  }
-
+api.get('/case', async (c) => {
   try {
-    const [count, username] = await Promise.all([
-      redis.get('count'),
-      reddit.getCurrentUsername(),
+    const date = caseDateForPost();
+    const [result, streak, yesterday, blame] = await Promise.all([
+      readResult(date, context.userId),
+      readStreak(context.userId),
+      yesterdaySummary(date),
+      readBlame(date),
     ]);
-
-    return c.json<InitResponse>({
-      type: 'init',
-      postId: postId,
-      count: count ? parseInt(count) : 0,
-      username: username ?? 'anonymous',
+    return c.json<CaseResponse>({
+      type: 'case',
+      case: toPublicCase(getCase(date)),
+      username: context.username ?? null,
+      result,
+      streak,
+      yesterday,
+      playersSoFar: blame.total,
     });
   } catch (error) {
-    console.error(`API Init Error for post ${postId}:`, error);
-    let errorMessage = 'Unknown error during initialization';
-    if (error instanceof Error) {
-      errorMessage = `Initialization failed: ${error.message}`;
+    console.error('GET /api/case failed', error);
+    return c.json<ErrorResponse>(
+      { type: 'error', message: 'Could not load today’s case.' },
+      500
+    );
+  }
+});
+
+api.post('/accuse', async (c) => {
+  try {
+    const body: unknown = await c.req.json();
+    const suspect: unknown =
+      body && typeof body === 'object'
+        ? Reflect.get(body, 'suspect')
+        : undefined;
+    if (!body || typeof body !== 'object' || !isSuspectId(suspect)) {
+      return c.json<ErrorResponse>(
+        { type: 'error', message: 'Pick a suspect.' },
+        400
+      );
     }
+    const date = caseDateForPost();
+    if (!getCase(date).suspects.some((s) => s.id === suspect)) {
+      return c.json<ErrorResponse>(
+        { type: 'error', message: 'That suspect was not in the lift.' },
+        400
+      );
+    }
+    const result = await accuse(date, context.userId, {
+      suspect,
+      seconds: Number(Reflect.get(body, 'seconds') ?? 0),
+      cluesRead: Number(Reflect.get(body, 'cluesRead') ?? 0),
+      hints: Number(Reflect.get(body, 'hints') ?? 0),
+    });
+    return c.json<AccuseResponse>({ type: 'accuse', result });
+  } catch (error) {
+    console.error('POST /api/accuse failed', error);
     return c.json<ErrorResponse>(
-      { status: 'error', message: errorMessage },
-      400
+      { type: 'error', message: 'Could not record your accusation.' },
+      500
     );
   }
-});
-
-api.post('/increment', async (c) => {
-  const { postId } = context;
-  if (!postId) {
-    return c.json<ErrorResponse>(
-      {
-        status: 'error',
-        message: 'postId is required',
-      },
-      400
-    );
-  }
-
-  const count = await redis.incrBy('count', 1);
-  return c.json<IncrementResponse>({
-    count,
-    postId,
-    type: 'increment',
-  });
-});
-
-api.post('/decrement', async (c) => {
-  const { postId } = context;
-  if (!postId) {
-    return c.json<ErrorResponse>(
-      {
-        status: 'error',
-        message: 'postId is required',
-      },
-      400
-    );
-  }
-
-  const count = await redis.incrBy('count', -1);
-  return c.json<DecrementResponse>({
-    count,
-    postId,
-    type: 'decrement',
-  });
 });

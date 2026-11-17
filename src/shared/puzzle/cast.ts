@@ -49,7 +49,7 @@ export const FOOD_IDS: readonly FoodId[] = [
 
 export const FOODS: Record<FoodId, Food> = {
   chili: { id: 'chili', label: 'the chili', short: 'chili' },
-  beans: { id: 'beans', label: 'baked beans', short: 'bean' },
+  beans: { id: 'beans', label: 'baked beans', short: 'baked bean' },
   cabbage: { id: 'cabbage', label: 'cabbage soup', short: 'cabbage' },
   eggs: { id: 'eggs', label: 'boiled eggs', short: 'egg' },
   broccoli: { id: 'broccoli', label: 'broccoli', short: 'broccoli' },

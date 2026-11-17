@@ -6,7 +6,8 @@
     "entrypoints": {
       "default": {
         "inline": true,
-        "entry": "splash.html"
+        "entry": "splash.html",
+        "height": "tall"
       },
       "game": {
         "entry": "game.html"
@@ -20,23 +21,13 @@
   "menu": {
     "items": [
       {
-        "label": "Create a new post",
-        "description": "who-farted-daily",
+        "label": "Post today’s Who Farted? case",
+        "description": "Creates today’s case post",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/post-create"
-      },
-      {
-        "label": "Example form",
-        "description": "Show a simple form",
-        "location": "subreddit",
-        "forUserType": "moderator",
-        "endpoint": "/internal/menu/example-form"
       }
     ]
-  },
-  "forms": {
-    "exampleForm": "/internal/form/example-submit"
   },
   "triggers": {
     "onAppInstall": "/internal/triggers/on-app-install"
