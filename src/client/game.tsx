@@ -20,7 +20,8 @@ import {
 import { Lift } from './components/Lift';
 import { Result } from './components/Result';
 import { Suspect } from './components/Suspect';
-import { fetchCase, postAccuse } from './lib/api';
+import { fetchCase, postAccuse, resetPlay } from './lib/api';
+import { TestBar } from './components/TestBar';
 import {
   FOOD_COLORS,
   groupFacts,
@@ -31,9 +32,11 @@ import {
 } from './lib/clues';
 import { PRACTICE_CASE, PRACTICE_CULPRIT, coachStep } from './lib/practice';
 import {
+  clearRulesSeen,
   formatTime,
   hasSeenRules,
   markRulesSeen,
+  shiftDay,
   takeOpenSuspect,
 } from './lib/util';
 
@@ -285,6 +288,7 @@ const Game = ({
     try {
       const res = await postAccuse({
         suspect: id,
+        date: c.id,
         seconds,
         cluesRead: read.size,
         hints,
@@ -594,21 +598,67 @@ export const App = () => {
   const [stage, setStage] = useState<'welcome' | 'practice' | 'real'>(() =>
     hasSeenRules() ? 'real' : 'welcome'
   );
+  // Test mode only (private test subreddit): which day to load, and a counter to reload it.
+  const [testDate, setTestDate] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    fetchCase()
-      .then(setData)
-      .catch((err: unknown) =>
-        setError(
-          err instanceof Error ? err.message : 'Could not load the case.'
-        )
-      );
-  }, []);
+    let cancelled = false;
+    fetchCase(testDate)
+      .then((next) => {
+        if (!cancelled) {
+          setData(next);
+          setBusy(false);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : 'Could not load the case.'
+          );
+          setBusy(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [testDate, reloadKey]);
 
   const finishIntro = () => {
     markRulesSeen();
     setStage('real');
   };
+
+  const testBar =
+    data?.testMode && stage !== 'welcome' ? (
+      <TestBar
+        c={data.case}
+        busy={busy}
+        onDay={(delta) => {
+          setBusy(true);
+          setStage('real');
+          setTestDate(shiftDay(data.case.id, delta));
+        }}
+        onToday={() => {
+          setBusy(true);
+          setStage('real');
+          setTestDate(null);
+          setReloadKey((k) => k + 1);
+        }}
+        onReplay={() => {
+          setBusy(true);
+          setStage('real');
+          resetPlay(data.case.id)
+            .catch((err: unknown) => console.error('Reset failed', err))
+            .finally(() => setReloadKey((k) => k + 1));
+        }}
+        onPractice={() => {
+          clearRulesSeen();
+          setStage('welcome');
+        }}
+      />
+    ) : null;
 
   if (error) {
     return (
@@ -620,20 +670,23 @@ export const App = () => {
     );
   }
   // Players who already played today skip straight to their result.
-  if (stage === 'welcome' && !data?.result) {
+  if (stage === 'welcome' && (!data?.result || data.testMode)) {
     return (
       <Welcome onPractice={() => setStage('practice')} onSkip={finishIntro} />
     );
   }
   if (stage === 'practice') {
     return (
-      <Game
-        key="practice"
-        c={PRACTICE_CASE}
-        initialResult={null}
-        practice
-        onPracticeDone={finishIntro}
-      />
+      <>
+        {testBar}
+        <Game
+          key="practice"
+          c={PRACTICE_CASE}
+          initialResult={null}
+          practice
+          onPracticeDone={finishIntro}
+        />
+      </>
     );
   }
   if (!data) {
@@ -643,7 +696,16 @@ export const App = () => {
       </div>
     );
   }
-  return <Game key="real" c={data.case} initialResult={data.result} />;
+  return (
+    <>
+      {testBar}
+      <Game
+        key={`real-${data.case.id}-${reloadKey}`}
+        c={data.case}
+        initialResult={data.result}
+      />
+    </>
+  );
 };
 
 createRoot(document.getElementById('root')!).render(

@@ -3,6 +3,7 @@ import type {
   AccuseResponse,
   CaseResponse,
   ErrorResponse,
+  ResetResponse,
 } from '../../shared/api';
 
 function isError(value: unknown): value is ErrorResponse {
@@ -13,8 +14,11 @@ function isError(value: unknown): value is ErrorResponse {
   );
 }
 
-export async function fetchCase(): Promise<CaseResponse> {
-  const res = await fetch('/api/case');
+/** `date` is only honoured by the server in the private test subreddit. */
+export async function fetchCase(date?: string | null): Promise<CaseResponse> {
+  const res = await fetch(
+    date ? `/api/case?date=${encodeURIComponent(date)}` : '/api/case'
+  );
   const data: CaseResponse | ErrorResponse = await res.json();
   if (!res.ok || isError(data)) {
     throw new Error(isError(data) ? data.message : `HTTP ${res.status}`);
@@ -29,6 +33,20 @@ export async function postAccuse(body: AccuseRequest): Promise<AccuseResponse> {
     body: JSON.stringify(body),
   });
   const data: AccuseResponse | ErrorResponse = await res.json();
+  if (!res.ok || isError(data)) {
+    throw new Error(isError(data) ? data.message : `HTTP ${res.status}`);
+  }
+  return data;
+}
+
+/** Test mode only: forget my accusation for this day so I can replay it. */
+export async function resetPlay(date: string): Promise<ResetResponse> {
+  const res = await fetch('/api/test/reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date }),
+  });
+  const data: ResetResponse | ErrorResponse = await res.json();
   if (!res.ok || isError(data)) {
     throw new Error(isError(data) ? data.message : `HTTP ${res.status}`);
   }

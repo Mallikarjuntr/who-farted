@@ -29,6 +29,28 @@ export function caseDateForPost(): string {
   return typeof value === 'string' && DATE_RE.test(value) ? value : todayUtc();
 }
 
+/**
+ * Test mode only ever switches on in the private playtest subreddit, never in
+ * the public one. It lets the developer replay cases and jump between days.
+ */
+const TEST_SUBREDDITS = ['who_farted_daily_dev'];
+
+export function isTestMode(): boolean {
+  return TEST_SUBREDDITS.includes((context.subredditName ?? '').toLowerCase());
+}
+
+/** In test mode a request may ask for any day's case; otherwise the post decides. */
+export function resolveCaseDate(requested: unknown): string {
+  if (
+    isTestMode() &&
+    typeof requested === 'string' &&
+    DATE_RE.test(requested)
+  ) {
+    return requested;
+  }
+  return caseDateForPost();
+}
+
 const cache = new Map<string, CaseFile>();
 
 export function getCase(date: string): CaseFile {
@@ -227,4 +249,23 @@ export async function yesterdaySummary(
     correctPct: Math.round((correct / blame.total) * 100),
     totalPlayers: blame.total,
   };
+}
+
+/** Test mode: forget this player's accusation for a day so they can play it again. */
+export async function resetPlay(
+  date: string,
+  userId: string | undefined
+): Promise<void> {
+  if (!userId || !isTestMode()) {
+    return;
+  }
+  const play = parsePlay(await redis.hGet(keys.played(date), userId));
+  if (!play) {
+    return;
+  }
+  await redis.hDel(keys.played(date), [userId]);
+  const count = await redis.hIncrBy(keys.blame(date), play.guessed, -1);
+  if (count < 0) {
+    await redis.hSet(keys.blame(date), { [play.guessed]: '0' });
+  }
 }

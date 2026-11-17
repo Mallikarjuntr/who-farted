@@ -63,3 +63,17 @@ export function markRulesSeen(): void {
     // Not critical.
   }
 }
+
+export function clearRulesSeen(): void {
+  try {
+    safeStorage()?.removeItem(RULES_KEY);
+  } catch {
+    // Not critical.
+  }
+}
+
+export function shiftDay(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000)
+    .toISOString()
+    .slice(0, 10);
+}

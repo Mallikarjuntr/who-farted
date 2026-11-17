@@ -200,3 +200,18 @@ body {
     animation: none;
   }
 }
+
+/* Small buttons for the test-mode bar (private test subreddit only). */
+.btn-test {
+  border: 2px solid var(--color-ink);
+  border-radius: 8px;
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  background: #ffffff;
+  cursor: pointer;
+}
+.btn-test:disabled {
+  opacity: 0.5;
+}

@@ -37,15 +37,21 @@ export type CaseResponse = {
   streak: Streak | null;
   yesterday: YesterdaySummary | null;
   playersSoFar: number;
+  /** True only in the private playtest subreddit. */
+  testMode: boolean;
 };
 
 export type AccuseRequest = {
   suspect: SuspectId;
+  /** Test mode only: which day's case is being accused. */
+  date?: string;
   seconds: number;
   cluesRead: number;
   hints: number;
 };
 
 export type AccuseResponse = { type: 'accuse'; result: AccuseResult };
+
+export type ResetResponse = { type: 'reset' };
 
 export type ErrorResponse = { type: 'error'; message: string };

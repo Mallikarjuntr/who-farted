@@ -9,7 +9,7 @@ import { generateCase, toPublicCase } from '../src/shared/puzzle/generator.ts';
 const date = process.argv[2] ?? new Date().toISOString().slice(0, 10);
 const port = Number(process.argv[3] ?? '5178');
 const root = join(import.meta.dirname, '..', 'dist', 'client');
-const c = generateCase(date);
+let c = generateCase(date);
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html',
@@ -27,6 +27,11 @@ let result: AccuseResult | null = null;
 createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${port}`);
   if (url.pathname === '/api/case') {
+    const wanted = url.searchParams.get('date');
+    if (wanted && wanted !== c.id) {
+      c = generateCase(wanted);
+      result = null;
+    }
     const body: CaseResponse = {
       type: 'case',
       case: toPublicCase(c),
@@ -42,6 +47,7 @@ createServer(async (req, res) => {
         totalPlayers: 812,
       },
       playersSoFar: 0,
+      testMode: true,
     };
     res
       .writeHead(200, { 'Content-Type': 'application/json' })
@@ -75,9 +81,11 @@ createServer(async (req, res) => {
       .end(JSON.stringify({ type: 'accuse', result }));
     return;
   }
-  if (url.pathname === '/api/reset') {
+  if (url.pathname === '/api/test/reset' || url.pathname === '/api/reset') {
     result = null;
-    res.writeHead(200).end('reset');
+    res
+      .writeHead(200, { 'Content-Type': 'application/json' })
+      .end(JSON.stringify({ type: 'reset' }));
     return;
   }
   const path = normalize(
