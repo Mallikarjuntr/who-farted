@@ -5,7 +5,7 @@ import type {
   Statement,
   SuspectId,
 } from '../../shared/puzzle/types';
-import { CAST, COL_WORDS, FOODS, ROW_WORDS } from '../../shared/puzzle/cast';
+import { CAST, COL_LABELS, FOODS, ROW_LABELS } from '../../shared/puzzle/cast';
 
 export const cellKey = (slot: Slot): string => `${slot.row}-${slot.col}`;
 
@@ -96,51 +96,58 @@ export function lunchTags(
   };
   for (const s of statements) {
     if (s.kind === 'ate') {
-      add(s.who, { food: s.food, text: FOODS[s.food].short, negative: false });
+      add(s.who, { food: s.food, text: FOODS[s.food].tag, negative: false });
     } else if (s.kind === 'didNotEat') {
       add(s.who, {
         food: s.food,
-        text: `no ${FOODS[s.food].short}`,
+        text: `NO ${FOODS[s.food].tag}`,
         negative: true,
       });
     } else if (s.kind === 'sameMeal') {
-      add(s.a, { food: null, text: `= ${name(s.b)}`, negative: false });
-      add(s.b, { food: null, text: `= ${name(s.a)}`, negative: false });
+      add(s.a, {
+        food: null,
+        text: `SAME AS ${name(s.b).toUpperCase()}`,
+        negative: false,
+      });
+      add(s.b, {
+        food: null,
+        text: `SAME AS ${name(s.a).toUpperCase()}`,
+        negative: false,
+      });
     }
   }
   return tags;
 }
 
-/** What the clues read so far say about the farter, as short chips. */
+/** What the clues read so far say about the farter, as short chips in the lift's own words. */
 export function profileChips(statements: readonly Statement[]): string[] {
   const chips: string[] = [];
   for (const s of statements) {
     switch (s.kind) {
       case 'culpritRow':
-        chips.push(`${ROW_WORDS[s.row]} row`);
+        chips.push(`${ROW_LABELS[s.row]} row`);
         break;
       case 'culpritCol':
-        chips.push(s.col === 1 ? 'in the middle' : `${COL_WORDS[s.col]} side`);
+        chips.push(
+          s.col === 1 ? 'in the MIDDLE' : `on the ${COL_LABELS[s.col]}`
+        );
         break;
       case 'culpritNotCol':
         chips.push(
-          s.col === 1 ? 'not in the middle' : `not ${COL_WORDS[s.col]} side`
+          s.col === 1 ? 'NOT in the MIDDLE' : `NOT on the ${COL_LABELS[s.col]}`
         );
         break;
       case 'culpritNextTo':
-        chips.push(`beside ${name(s.other)}`);
+        chips.push(`NEXT TO ${name(s.other)}`);
         break;
       case 'culpritNotNextTo':
-        chips.push(`not beside ${name(s.other)}`);
-        break;
-      case 'culpritSameColumnAs':
-        chips.push(`in line with ${name(s.other)}`);
+        chips.push(`NOT next to ${name(s.other)}`);
         break;
       case 'culpritAte':
-        chips.push(`ate ${FOODS[s.food].label}`);
+        chips.push(`ate ${FOODS[s.food].tag}`);
         break;
       case 'culpritDidNotEat':
-        chips.push(`no ${FOODS[s.food].short}`);
+        chips.push(`did NOT eat ${FOODS[s.food].tag}`);
         break;
       default:
         break;
@@ -149,17 +156,53 @@ export function profileChips(statements: readonly Statement[]): string[] {
   return chips;
 }
 
-/** Facts about the whole lift ("exactly 2 people ate eggs"). */
+/** Facts about the whole lift ("EXACTLY 2 ate EGGS"). */
 export function groupFacts(statements: readonly Statement[]): string[] {
   return statements.flatMap((s) =>
     s.kind === 'foodCount'
       ? [
           s.count === 0
-            ? `nobody ate ${FOODS[s.food].label}`
-            : `${s.count} ate ${FOODS[s.food].label}`,
+            ? `NOBODY ate ${FOODS[s.food].tag}`
+            : `EXACTLY ${s.count} ate ${FOODS[s.food].tag}`,
         ]
       : []
   );
+}
+
+export type MeaningPart = {
+  text: string;
+  food: FoodId | null;
+  strong: boolean;
+};
+
+const FOOD_BY_TAG = new Map<string, FoodId>(
+  Object.values(FOODS).map((f) => [f.tag, f.id])
+);
+const NAMES = new Set(Object.values(CAST).map((c) => c.name));
+
+/**
+ * Splits a meaning line into words so the screen can make the key ones pop:
+ * capital words (NOT, LEFT, BACK), names, and food tags (shown in food colours).
+ */
+export function meaningParts(plain: string): MeaningPart[] {
+  return plain.split(' ').flatMap((word, i, all): MeaningPart[] => {
+    const bare = word.replace(/[.,]/g, '');
+    const tail = `${word.slice(bare.length)}${i < all.length - 1 ? ' ' : ''}`;
+    const food = FOOD_BY_TAG.get(bare) ?? null;
+    if (food) {
+      // The food chip holds just the word; the full stop stays outside it.
+      return [
+        { text: bare, food, strong: true },
+        { text: tail, food: null, strong: false },
+      ];
+    }
+    const strong =
+      NAMES.has(bare) ||
+      (bare.length > 1 && bare === bare.toUpperCase() && /[A-Z]/.test(bare));
+    return [
+      { text: `${word}${i < all.length - 1 ? ' ' : ''}`, food: null, strong },
+    ];
+  });
 }
 
 export const FOOD_COLORS: Record<FoodId, string> = {

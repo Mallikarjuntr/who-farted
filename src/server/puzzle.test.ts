@@ -134,6 +134,11 @@ void test('clue text is complete and never leaks the answer field', () => {
   for (const c of cases) {
     for (const t of c.testimonies) {
       assert.ok(t.quote.length > 10 && t.plain.length > 10);
+      assert.notEqual(
+        t.statement.kind,
+        'culpritSameColumnAs',
+        'hard-to-picture clue type is retired'
+      );
       assert.ok(
         !/undefined|NaN|\[object/.test(t.quote + t.plain),
         `bad text in ${c.id}: ${t.quote}`

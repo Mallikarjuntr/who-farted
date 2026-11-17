@@ -1,51 +1,65 @@
 import type { Statement, SuspectId } from './types.ts';
 import type { Rng } from './rng.ts';
-import { CAST, COL_WORDS, FOODS, ROW_WORDS } from './cast.ts';
+import {
+  CAST,
+  COL_LABELS,
+  COL_WORDS,
+  FOODS,
+  ROW_LABELS,
+  ROW_WORDS,
+} from './cast.ts';
 import { must } from './rng.ts';
 
 const name = (id: SuspectId): string => CAST[id].name;
 const row = (r: number): string => must(ROW_WORDS[r], 'row word');
 const col = (c: number): string => must(COL_WORDS[c], 'column word');
 
-function side(c: number): string {
-  return c === 1 ? 'in the middle' : `on the ${col(c)} side`;
-}
-
 function people(n: number): string {
   return n === 1 ? 'person' : 'people';
 }
 
-/** The exact meaning of a clue. Shown under every quote so nothing is ambiguous. */
+const rowLabel = (r: number): string => must(ROW_LABELS[r], 'row label');
+const colLabel = (c: number): string => must(COL_LABELS[c], 'column label');
+const tag = (s: { food: keyof typeof FOODS }): string => FOODS[s.food].tag;
+
+function onCol(c: number): string {
+  return c === 1 ? `in the ${colLabel(c)}` : `on the ${colLabel(c)}`;
+}
+
+/**
+ * The exact meaning of a clue in short, simple English. Key words are in
+ * capitals and match the labels printed on the lift (LEFT, BACK, …).
+ */
 export function plainText(s: Statement): string {
   switch (s.kind) {
     case 'culpritRow':
-      return `The farter was in the ${row(s.row)} row.`;
+      return `The farter was in the ${rowLabel(s.row)} row.`;
     case 'culpritCol':
-      return `The farter was standing ${side(s.col)}.`;
+      return `The farter was ${onCol(s.col)}.`;
     case 'culpritNotCol':
-      return `The farter was not standing ${side(s.col)}.`;
+      return `The farter was NOT ${onCol(s.col)}.`;
     case 'culpritNextTo':
-      return `The farter was standing right next to ${name(s.other)}.`;
+      return `The farter stood NEXT TO ${name(s.other)}.`;
     case 'culpritNotNextTo':
-      return `The farter was not standing next to ${name(s.other)}.`;
+      return `The farter did NOT stand next to ${name(s.other)}.`;
     case 'culpritSameColumnAs':
-      return `The farter was directly in front of or behind ${name(s.other)}.`;
+      return `The farter stood in the same column as ${name(s.other)}.`;
     case 'culpritAte':
-      return `The farter ate ${FOODS[s.food].label}.`;
+      return `The farter ate ${tag(s)}.`;
     case 'culpritDidNotEat':
-      return `The farter did not eat ${FOODS[s.food].label}.`;
+      return `The farter did NOT eat ${tag(s)}.`;
     case 'innocent':
-      return `${name(s.who)} is innocent.`;
+      return `${name(s.who)} is NOT the farter.`;
     case 'ate':
-      return `${name(s.who)} ate ${FOODS[s.food].label}.`;
+      return `${name(s.who)} ate ${tag(s)}.`;
     case 'didNotEat':
-      return `${name(s.who)} did not eat ${FOODS[s.food].label}.`;
+      return `${name(s.who)} did NOT eat ${tag(s)}.`;
     case 'sameMeal':
-      return `${name(s.a)} and ${name(s.b)} ate the same lunch.`;
+      return `${name(s.a)} and ${name(s.b)} ate the SAME lunch.`;
     case 'foodCount':
       return s.count === 0
-        ? `Nobody ate ${FOODS[s.food].label}.`
-        : `Exactly ${s.count} ${people(s.count)} ate ${FOODS[s.food].label}.`;
+        ? `NOBODY ate ${tag(s)}.`
+        : `EXACTLY ${s.count} ${people(s.count)} ate ${tag(s)}.`;
   }
 }
 

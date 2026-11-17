@@ -21,7 +21,15 @@ import { Lift } from './components/Lift';
 import { Result } from './components/Result';
 import { Suspect } from './components/Suspect';
 import { fetchCase, postAccuse } from './lib/api';
-import { groupFacts, lunchTags, profileChips, zoneFor } from './lib/clues';
+import {
+  FOOD_COLORS,
+  groupFacts,
+  lunchTags,
+  meaningParts,
+  profileChips,
+  zoneFor,
+} from './lib/clues';
+import { PRACTICE_CASE, PRACTICE_CULPRIT, coachStep } from './lib/practice';
 import {
   formatTime,
   hasSeenRules,
@@ -31,7 +39,13 @@ import {
 
 type Note = { tone: 'info' | 'warn' | 'good'; text: string } | null;
 
-const Rules = ({ c, onClose }: { c: PublicCase; onClose: () => void }) => (
+const Rules = ({
+  liarMode,
+  onClose,
+}: {
+  liarMode: boolean;
+  onClose: () => void;
+}) => (
   <div
     className="fixed inset-0 z-30 flex items-center justify-center bg-ink/60 p-5"
     role="dialog"
@@ -42,22 +56,20 @@ const Rules = ({ c, onClose }: { c: PublicCase; onClose: () => void }) => (
       <h2 id="rules-title" className="logo m-0 text-center text-[30px]">
         HOW TO PLAY
       </h2>
-      <ol className="mt-4 mb-0 flex list-none flex-col gap-3 p-0 text-[15px] leading-snug">
+      <ol className="mt-4 mb-0 flex list-none flex-col gap-3 p-0 text-[16px] leading-snug">
         <li>
-          <strong>1. Tap a suspect</strong> to hear their side. The clue lights
-          up the lift.
+          <strong>1. Tap a person.</strong> Read their clue.
         </li>
         <li>
-          <strong>2. Cross out</strong> anyone the clues clear. No guessing:
-          they’ll protest if you can’t prove it.
+          <strong>2. Cross out</strong> people who are NOT the farter.
         </li>
         <li>
-          <strong>3. One accusation.</strong> Make it count.
+          <strong>3. Pick the farter.</strong> You get one try.
         </li>
-        {c.liarMode && (
+        {liarMode && (
           <li className="sticker-sm rounded-lg bg-sun px-2 py-1.5">
-            <strong>Weekend rules:</strong> the farter is lying. Everyone else
-            tells the truth.
+            <strong>Weekend:</strong> the farter LIES. Everyone else tells the
+            truth.
           </li>
         )}
       </ol>
@@ -66,14 +78,61 @@ const Rules = ({ c, onClose }: { c: PublicCase; onClose: () => void }) => (
         className="btn display mt-5 w-full rounded-xl bg-tomato py-2 text-[22px]"
         onClick={onClose}
       >
-        LET’S SNIFF
+        GOT IT
       </button>
     </div>
   </div>
 );
 
-const Game = ({ data }: { data: CaseResponse }) => {
-  const c = data.case;
+const Welcome = ({
+  onPractice,
+  onSkip,
+}: {
+  onPractice: () => void;
+  onSkip: () => void;
+}) => (
+  <div className="halftone flex min-h-full items-center justify-center p-5">
+    <div className="sticker pop flex w-full max-w-[360px] flex-col items-center gap-3 rounded-2xl bg-white p-5 text-center">
+      <h1 className="logo m-0 text-[38px] leading-none">WHO FARTED?</h1>
+      <div className="flex h-24 items-end gap-1" aria-hidden="true">
+        <Suspect id="agnes" mood="shifty" className="h-20 w-auto" />
+        <Suspect id="biscuit" mood="guilty" className="h-24 w-auto" />
+        <Suspect id="brock" mood="shifty" className="h-20 w-auto" />
+      </div>
+      <p className="m-0 text-[16px] leading-snug font-medium">
+        Someone farted in the lift. Read the clues. Find the farter.
+      </p>
+      <button
+        type="button"
+        className="btn display w-full rounded-xl bg-tomato py-2.5 text-[22px]"
+        onClick={onPractice}
+      >
+        PRACTICE (30 SEC)
+      </button>
+      <button
+        type="button"
+        className="btn w-full rounded-xl bg-white py-2 text-[15px] font-bold"
+        onClick={onSkip}
+      >
+        I know how. Skip.
+      </button>
+    </div>
+  </div>
+);
+
+type GameProps = {
+  c: PublicCase;
+  initialResult: AccuseResult | null;
+  practice?: boolean;
+  onPracticeDone?: () => void;
+};
+
+const Game = ({
+  c,
+  initialResult,
+  practice = false,
+  onPracticeDone,
+}: GameProps) => {
   const analysis = useMemo(() => analyzeCase(c), [c]);
   const indexOf = useCallback(
     (id: SuspectId) => c.suspects.findIndex((s) => s.id === id),
@@ -82,6 +141,9 @@ const Game = ({ data }: { data: CaseResponse }) => {
 
   // The feed card can open the game straight onto the suspect that was tapped.
   const [opened] = useState<SuspectId | null>(() => {
+    if (practice) {
+      return null;
+    }
     const first = takeOpenSuspect();
     return first && c.suspects.some((s) => s.id === first) ? first : null;
   });
@@ -93,15 +155,16 @@ const Game = ({ data }: { data: CaseResponse }) => {
   const [shaking, setShaking] = useState<SuspectId | null>(null);
   const [note, setNote] = useState<Note>(null);
   const [hints, setHints] = useState(0);
-  const [showRules, setShowRules] = useState(!hasSeenRules());
+  const [showRules, setShowRules] = useState(false);
   const [accusing, setAccusing] = useState(false);
   const [confirm, setConfirm] = useState<SuspectId | null>(null);
   const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<AccuseResult | null>(data.result);
+  const [result, setResult] = useState<AccuseResult | null>(initialResult);
+  const [practiceWon, setPracticeWon] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const startRef = useRef<number | null>(null);
 
-  const playing = !showRules && !result;
+  const playing = !showRules && !result && !practiceWon;
 
   useEffect(() => {
     if (!playing) {
@@ -116,11 +179,11 @@ const Game = ({ data }: { data: CaseResponse }) => {
     return () => window.clearInterval(timer);
   }, [playing, seconds]);
 
-  const select = useCallback((id: SuspectId) => {
+  const select = (id: SuspectId) => {
     setSelected(id);
     setNote(null);
     setRead((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
-  }, []);
+  };
 
   const readIndexes = useMemo(
     () => [...read].map(indexOf).filter((i) => i >= 0),
@@ -136,6 +199,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
   const tags = useMemo(() => lunchTags(readStatements), [readStatements]);
   const chips = useMemo(() => profileChips(readStatements), [readStatements]);
   const facts = useMemo(() => groupFacts(readStatements), [readStatements]);
+  const coach = practice ? coachStep(read, crossed) : null;
 
   const testimony = selected ? c.testimonies[indexOf(selected)] : undefined;
   const zone = testimony ? zoneFor(testimony.statement, c.suspects) : null;
@@ -155,7 +219,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
       window.setTimeout(() => setShaking(null), 400);
       setNote({
         tone: 'warn',
-        text: `“Prove it!” The clues you’ve read don’t clear ${CAST[id].name} yet.`,
+        text: `“Prove it!” No clue clears ${CAST[id].name} yet. Read more clues.`,
       });
       return;
     }
@@ -165,9 +229,9 @@ const Game = ({ data }: { data: CaseResponse }) => {
       left.length === 1 && left[0]
         ? {
             tone: 'good',
-            text: `Only ${CAST[left[0].id].name} is left. Time to accuse!`,
+            text: `Only ${CAST[left[0].id].name} is left. Tap J’ACCUSE!`,
           }
-        : { tone: 'good', text: `${CAST[id].name} is cleared.` }
+        : { tone: 'good', text: `${CAST[id].name} is NOT the farter.` }
     );
   };
 
@@ -179,7 +243,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
     if (clearable) {
       setNote({
         tone: 'info',
-        text: `The clues you’ve read already clear ${CAST[clearable.id].name}.`,
+        text: `You can cross out ${CAST[clearable.id].name} now.`,
       });
       return;
     }
@@ -187,7 +251,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
     if (unread) {
       setNote({
         tone: 'info',
-        text: `Hear ${CAST[unread.id].name}’s side next.`,
+        text: `Read ${CAST[unread.id].name}’s clue next.`,
       });
       return;
     }
@@ -196,14 +260,27 @@ const Game = ({ data }: { data: CaseResponse }) => {
       tone: 'info',
       text:
         left.length === 1
-          ? 'Only one suspect fits every clue. Accuse them!'
+          ? 'Only one person fits every clue. Accuse them!'
           : c.liarMode
-            ? 'Find two clues that can’t both be true. One of them is the farter’s lie.'
-            : 'Combine a lunch clue with a lunch fact about someone.',
+            ? 'Two clues can’t both be true. One of them is the farter’s lie.'
+            : 'Use a food clue about the farter with a food clue about a person.',
     });
   };
 
   const sendAccusation = async (id: SuspectId) => {
+    if (practice) {
+      setConfirm(null);
+      setAccusing(false);
+      if (id === PRACTICE_CULPRIT) {
+        setPracticeWon(true);
+      } else {
+        setNote({
+          tone: 'warn',
+          text: `Not ${CAST[id].name}. Look at the clues again.`,
+        });
+      }
+      return;
+    }
     setSending(true);
     try {
       const res = await postAccuse({
@@ -217,7 +294,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
       setConfirm(null);
     } catch (err) {
       console.error(err);
-      setNote({ tone: 'warn', text: 'The lift jammed. Try accusing again.' });
+      setNote({ tone: 'warn', text: 'Something went wrong. Try again.' });
     } finally {
       setSending(false);
     }
@@ -225,6 +302,28 @@ const Game = ({ data }: { data: CaseResponse }) => {
 
   if (result) {
     return <Result c={c} result={result} />;
+  }
+
+  if (practiceWon) {
+    return (
+      <div className="halftone flex min-h-full items-center justify-center p-5">
+        <div className="sticker pop flex w-full max-w-[360px] flex-col items-center gap-3 rounded-2xl bg-white p-5 text-center">
+          <h1 className="logo m-0 text-[40px] leading-none">NAILED IT!</h1>
+          <Suspect id="biscuit" mood="guilty" className="h-28 w-auto" />
+          <p className="m-0 text-[16px] leading-snug font-medium">
+            Biscuit did it. You’re ready for the real case: more people, same
+            rules.
+          </p>
+          <button
+            type="button"
+            className="btn display w-full rounded-xl bg-tomato py-2.5 text-[22px]"
+            onClick={onPracticeDone}
+          >
+            START TODAY’S CASE
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const noteStyle =
@@ -239,7 +338,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
       <div className="mx-auto flex min-h-full max-w-[440px] flex-col gap-3 px-3 pt-2 pb-28">
         <header className="flex items-center justify-between">
           <span className="sticker-sm shrink-0 rounded-md bg-white px-1.5 py-0.5 text-[12px] font-bold whitespace-nowrap">
-            #{c.number} · FL {c.floor}
+            {practice ? 'PRACTICE' : `#${c.number} · FL ${c.floor}`}
           </span>
           <h1 className="logo m-0 text-[21px] leading-none whitespace-nowrap">
             WHO FARTED?
@@ -259,9 +358,18 @@ const Game = ({ data }: { data: CaseResponse }) => {
           </div>
         </header>
 
+        {coach && (
+          <p
+            className="sticker rise m-0 rounded-xl bg-sun px-3 py-2 text-[15px] leading-snug font-bold"
+            role="status"
+          >
+            {coach.text}
+          </p>
+        )}
+
         {c.liarMode && (
-          <p className="sticker-sm m-0 rounded-lg bg-sun px-2 py-1 text-center text-[13px] font-bold">
-            Weekend rules: the farter is lying. Everyone else tells the truth.
+          <p className="sticker-sm m-0 rounded-lg bg-sun px-2 py-1 text-center text-[14px] font-bold">
+            Weekend: the farter LIES. Everyone else tells the truth.
           </p>
         )}
 
@@ -273,6 +381,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
           shaking={shaking}
           zone={zone}
           tags={tags}
+          pulse={coach?.target ?? null}
           onSelect={select}
         />
 
@@ -282,52 +391,59 @@ const Game = ({ data }: { data: CaseResponse }) => {
             aria-live="polite"
           >
             <div className="flex items-baseline justify-between gap-2">
-              <span className="display text-[17px]">
-                {CAST[selected].name.toUpperCase()}{' '}
-                <span className="font-body text-[13px] font-medium tracking-normal text-ink-soft">
-                  {CAST[selected].role.toLowerCase()}
-                </span>
+              <span className="text-[13px] font-bold tracking-wide text-ink-soft">
+                {CAST[selected].name.toUpperCase()}’S CLUE
               </span>
               <span className="text-[11.5px] font-bold text-ink-soft">
-                {read.size} OF {c.suspects.length} HEARD
+                {read.size} OF {c.suspects.length} READ
               </span>
             </div>
-            <p className="m-0 mt-1 text-[15.5px] leading-snug">
-              {testimony.quote}
-            </p>
-            <p className="m-0 mt-2 rounded-md bg-paper px-2 py-1 text-[13.5px] leading-snug">
-              <strong>Means:</strong> {testimony.plain}
-              {c.liarMode && (
-                <span className="text-ink-soft">
-                  {' '}
-                  (unless they’re the farter)
-                </span>
+            <p className="m-0 mt-1 text-[19px] leading-snug font-medium">
+              {meaningParts(testimony.plain).map((part, i) =>
+                part.food ? (
+                  <strong
+                    key={i}
+                    className="rounded-md border-2 border-ink px-1"
+                    style={{ background: FOOD_COLORS[part.food] }}
+                  >
+                    {part.text}
+                  </strong>
+                ) : part.strong ? (
+                  <strong key={i}>{part.text}</strong>
+                ) : (
+                  <span key={i}>{part.text}</span>
+                )
               )}
+            </p>
+            {c.liarMode && (
+              <p className="m-0 mt-1 text-[13px] font-bold text-tomato">
+                This could be the farter’s lie.
+              </p>
+            )}
+            <p className="m-0 mt-2 rounded-md bg-paper px-2 py-1 text-[13px] leading-snug text-ink-soft italic">
+              {testimony.quote}
             </p>
             <button
               type="button"
-              className="btn mt-2.5 w-full rounded-xl bg-white py-1.5 text-[14px] font-bold"
+              className="btn mt-2.5 w-full rounded-xl bg-white py-1.5 text-[15px] font-bold"
               onClick={() => toggleCross(selected)}
             >
               {crossed.has(selected)
-                ? `Bring ${CAST[selected].name} back`
-                : `Cross out ${CAST[selected].name}`}
+                ? `Undo: bring ${CAST[selected].name} back`
+                : `CROSS OUT ${CAST[selected].name.toUpperCase()}`}
             </button>
           </section>
         ) : (
           <section className="rounded-2xl border-[3px] border-dashed border-ink bg-white/70 px-3.5 py-3 text-center">
-            <p className="m-0 text-[15px] font-bold">
-              Tap a suspect to hear their side.
-            </p>
-            <p className="m-0 mt-1 text-[13px] text-ink-soft">
-              Every clue lights up the lift.
+            <p className="m-0 text-[16px] font-bold">
+              Tap a person to read their clue.
             </p>
           </section>
         )}
 
         {note && (
           <p
-            className={`sticker-sm rise m-0 rounded-lg px-2.5 py-1.5 text-[14px] font-medium ${noteStyle}`}
+            className={`sticker-sm rise m-0 rounded-lg px-2.5 py-1.5 text-[15px] font-medium ${noteStyle}`}
             role="status"
           >
             {note.text}
@@ -337,13 +453,13 @@ const Game = ({ data }: { data: CaseResponse }) => {
         {(chips.length > 0 || facts.length > 0) && (
           <section className="rounded-2xl border-2 border-ink bg-white px-3 py-2">
             <p className="display m-0 text-[14px]">
-              {c.liarMode ? 'CLAIMS ABOUT THE FARTER' : 'THE FARTER WAS…'}
+              {c.liarMode ? 'CLUES SAY THE FARTER WAS…' : 'THE FARTER WAS…'}
             </p>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {chips.map((chip) => (
                 <span
                   key={chip}
-                  className="rounded-md border-2 border-ink bg-tomato/20 px-1.5 text-[12.5px] font-bold"
+                  className="rounded-md border-2 border-ink bg-tomato/20 px-1.5 text-[13px] font-bold"
                 >
                   {chip}
                 </span>
@@ -351,7 +467,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
               {facts.map((fact) => (
                 <span
                   key={fact}
-                  className="rounded-md border-2 border-ink bg-white px-1.5 text-[12.5px] font-bold"
+                  className="rounded-md border-2 border-ink bg-white px-1.5 text-[13px] font-bold"
                 >
                   {fact}
                 </span>
@@ -402,9 +518,13 @@ const Game = ({ data }: { data: CaseResponse }) => {
               <div className="flex flex-col items-center gap-2 text-center">
                 <Suspect id={confirm} mood="shifty" className="h-28 w-auto" />
                 <h2 id="accuse-title" className="display m-0 text-[24px]">
-                  ACCUSE {CAST[confirm].name.toUpperCase()}?
+                  {CAST[confirm].name.toUpperCase()} DID IT?
                 </h2>
-                <p className="m-0 text-[14px]">One shot. No take-backs.</p>
+                <p className="m-0 text-[15px]">
+                  {practice
+                    ? 'Are you sure?'
+                    : 'You get one try. Are you sure?'}
+                </p>
                 <div className="mt-2 flex w-full gap-2">
                   <button
                     type="button"
@@ -412,7 +532,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
                     onClick={() => setConfirm(null)}
                     disabled={sending}
                   >
-                    Wait
+                    No, wait
                   </button>
                   <button
                     type="button"
@@ -420,7 +540,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
                     onClick={() => void sendAccusation(confirm)}
                     disabled={sending}
                   >
-                    {sending ? '…' : 'J’ACCUSE!'}
+                    {sending ? '…' : 'YES!'}
                   </button>
                 </div>
               </div>
@@ -430,7 +550,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
                   id="accuse-title"
                   className="display m-0 text-center text-[22px]"
                 >
-                  WHO DID IT?
+                  WHO IS THE FARTER?
                 </h2>
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   {c.suspects.map((s) => (
@@ -453,7 +573,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
                   className="btn mt-3 w-full rounded-xl bg-white py-2 font-bold"
                   onClick={() => setAccusing(false)}
                 >
-                  Keep investigating
+                  Not yet. Keep looking.
                 </button>
               </>
             )}
@@ -462,13 +582,7 @@ const Game = ({ data }: { data: CaseResponse }) => {
       )}
 
       {showRules && (
-        <Rules
-          c={c}
-          onClose={() => {
-            markRulesSeen();
-            setShowRules(false);
-          }}
-        />
+        <Rules liarMode={c.liarMode} onClose={() => setShowRules(false)} />
       )}
     </div>
   );
@@ -477,6 +591,9 @@ const Game = ({ data }: { data: CaseResponse }) => {
 export const App = () => {
   const [data, setData] = useState<CaseResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stage, setStage] = useState<'welcome' | 'practice' | 'real'>(() =>
+    hasSeenRules() ? 'real' : 'welcome'
+  );
 
   useEffect(() => {
     fetchCase()
@@ -488,6 +605,11 @@ export const App = () => {
       );
   }, []);
 
+  const finishIntro = () => {
+    markRulesSeen();
+    setStage('real');
+  };
+
   if (error) {
     return (
       <div className="halftone flex min-h-full items-center justify-center p-6 text-center">
@@ -497,6 +619,23 @@ export const App = () => {
       </div>
     );
   }
+  // Players who already played today skip straight to their result.
+  if (stage === 'welcome' && !data?.result) {
+    return (
+      <Welcome onPractice={() => setStage('practice')} onSkip={finishIntro} />
+    );
+  }
+  if (stage === 'practice') {
+    return (
+      <Game
+        key="practice"
+        c={PRACTICE_CASE}
+        initialResult={null}
+        practice
+        onPracticeDone={finishIntro}
+      />
+    );
+  }
   if (!data) {
     return (
       <div className="halftone flex min-h-full items-center justify-center">
@@ -504,7 +643,7 @@ export const App = () => {
       </div>
     );
   }
-  return <Game data={data} />;
+  return <Game key="real" c={data.case} initialResult={data.result} />;
 };
 
 createRoot(document.getElementById('root')!).render(

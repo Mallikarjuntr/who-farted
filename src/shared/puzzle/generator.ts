@@ -18,7 +18,6 @@ import {
   createWorldSpace,
   isFactStatement,
   isNextTo,
-  isSameColumn,
   truthVector,
 } from './logic.ts';
 import { createRng, must } from './rng.ts';
@@ -99,7 +98,6 @@ const VOICE_KINDS: Record<Voice, readonly StatementKind[]> = {
     'culpritNotCol',
     'culpritNextTo',
     'culpritNotNextTo',
-    'culpritSameColumnAs',
     'culpritAte',
     'culpritDidNotEat',
     'innocent',
@@ -116,7 +114,6 @@ const VOICE_KINDS: Record<Voice, readonly StatementKind[]> = {
     'culpritNotCol',
     'culpritNextTo',
     'culpritNotNextTo',
-    'culpritSameColumnAs',
     'innocent',
   ],
 };
@@ -150,9 +147,6 @@ function catalogue(layout: Layout, recipe: Recipe): Statement[] {
         { kind: 'culpritNextTo', other },
         { kind: 'culpritNotNextTo', other }
       );
-    }
-    if (slots.some((s) => isSameColumn(s, slot))) {
-      out.push({ kind: 'culpritSameColumnAs', other });
     }
     out.push({ kind: 'innocent', who: other });
     for (const food of menu) {

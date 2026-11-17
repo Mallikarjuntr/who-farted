@@ -36,6 +36,8 @@ export type Food = {
   label: string;
   /** Used as an adjective: "a chili smell". */
   short: string;
+  /** One simple word for stickers and meaning lines: "BEANS". */
+  tag: string;
 };
 
 export const FOOD_IDS: readonly FoodId[] = [
@@ -48,13 +50,31 @@ export const FOOD_IDS: readonly FoodId[] = [
 ];
 
 export const FOODS: Record<FoodId, Food> = {
-  chili: { id: 'chili', label: 'the chili', short: 'chili' },
-  beans: { id: 'beans', label: 'baked beans', short: 'baked bean' },
-  cabbage: { id: 'cabbage', label: 'cabbage soup', short: 'cabbage' },
-  eggs: { id: 'eggs', label: 'boiled eggs', short: 'egg' },
-  broccoli: { id: 'broccoli', label: 'broccoli', short: 'broccoli' },
-  onions: { id: 'onions', label: 'onion rings', short: 'onion' },
+  chili: { id: 'chili', label: 'the chili', short: 'chili', tag: 'CHILI' },
+  beans: {
+    id: 'beans',
+    label: 'baked beans',
+    short: 'baked bean',
+    tag: 'BEANS',
+  },
+  cabbage: {
+    id: 'cabbage',
+    label: 'cabbage soup',
+    short: 'cabbage',
+    tag: 'CABBAGE',
+  },
+  eggs: { id: 'eggs', label: 'boiled eggs', short: 'egg', tag: 'EGGS' },
+  broccoli: {
+    id: 'broccoli',
+    label: 'broccoli',
+    short: 'broccoli',
+    tag: 'BROCCOLI',
+  },
+  onions: { id: 'onions', label: 'onion rings', short: 'onion', tag: 'ONIONS' },
 };
 
+/** These words are printed on the lift itself, so clues can use exactly the same words. */
 export const ROW_WORDS = ['back', 'front'];
 export const COL_WORDS = ['left', 'middle', 'right'];
+export const ROW_LABELS = ['BACK', 'FRONT'];
+export const COL_LABELS = ['LEFT', 'MIDDLE', 'RIGHT'];
