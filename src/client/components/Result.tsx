@@ -12,7 +12,13 @@ import { Burst } from './Burst';
 import { SolveSteps } from './SolveSteps';
 import { Suspect } from './Suspect';
 
-type Props = { c: PublicCase; result: AccuseResult; commented: boolean };
+type Props = {
+  c: PublicCase;
+  result: AccuseResult;
+  commented: boolean;
+  /** True while the server is still confirming: the reveal shows, the numbers follow. */
+  pending?: boolean;
+};
 
 function burstPath(): string {
   const cx = 130;
@@ -29,7 +35,7 @@ function burstPath(): string {
 
 const BURST = burstPath();
 
-export const Result = ({ c, result, commented }: Props) => {
+export const Result = ({ c, result, commented, pending = false }: Props) => {
   const badge = badgeFor(result.streak?.current ?? 0);
   const next = nextBadge(result.streak?.current ?? 0);
   const [comment, setComment] = useState<'idle' | 'posting' | 'posted'>(
@@ -124,8 +130,10 @@ export const Result = ({ c, result, commented }: Props) => {
           </span>
         </div>
 
-        <p className="m-0 mt-3 text-center text-[15px] font-medium italic">
-          “{confession(result.culprit, culpritFood)}”
+        <p
+          className={`m-0 mt-3 min-h-[22px] text-center text-[15px] font-medium italic ${pending ? 'opacity-0' : 'rise'}`}
+        >
+          {pending ? '' : `“${confession(result.culprit, culpritFood)}”`}
         </p>
         {!result.correct && (
           <>
@@ -134,8 +142,9 @@ export const Result = ({ c, result, commented }: Props) => {
               {CAST[result.guessed].name}.
             </p>
             <p className="m-0 text-center text-[14px] font-medium">
-              So close! Only {rightPct}% got it today. See you tomorrow,
-              detective.
+              {pending
+                ? 'So close! See you tomorrow, detective.'
+                : `So close! Only ${rightPct}% got it today. See you tomorrow, detective.`}
             </p>
             <section className="sticker w-full rounded-2xl bg-white px-3 py-2.5">
               <p className="display m-0 mb-1.5 text-[15px]">HOW TO SOLVE IT</p>
@@ -159,10 +168,14 @@ export const Result = ({ c, result, commented }: Props) => {
           </div>
           <div className="sticker -rotate-1 bg-sun px-3 py-1 text-center">
             <p className="display m-0 text-[22px]">
-              {result.streak ? `${result.streak.current} DAYS` : '—'}
+              {pending
+                ? '…'
+                : result.streak
+                  ? `${result.streak.current} DAYS`
+                  : '—'}
             </p>
             <p className="m-0 text-[11.5px] font-bold">
-              {result.streak ? 'streak' : 'log in for streaks'}
+              {pending || result.streak ? 'streak' : 'log in for streaks'}
             </p>
           </div>
         </div>
@@ -187,68 +200,76 @@ export const Result = ({ c, result, commented }: Props) => {
           </section>
         )}
 
-        <section className="sticker w-full rounded-2xl bg-white px-3 py-2.5">
-          <p className="display m-0 text-[15px]">WHO ATE WHAT</p>
-          <div className="mt-1.5 grid grid-cols-3 gap-1.5">
-            {result.lunches.map((l) => (
-              <div key={l.id} className="flex items-center gap-1">
-                <Suspect id={l.id} className="h-9 w-auto shrink-0" />
-                <span className="flex flex-col leading-tight">
-                  <span className="text-[11.5px] font-bold">
-                    {CAST[l.id].name}
+        {result.lunches.length > 0 && (
+          <section className="sticker rise w-full rounded-2xl bg-white px-3 py-2.5">
+            <p className="display m-0 text-[15px]">WHO ATE WHAT</p>
+            <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+              {result.lunches.map((l) => (
+                <div key={l.id} className="flex items-center gap-1">
+                  <Suspect id={l.id} className="h-9 w-auto shrink-0" />
+                  <span className="flex flex-col leading-tight">
+                    <span className="text-[11.5px] font-bold">
+                      {CAST[l.id].name}
+                    </span>
+                    <span
+                      className="w-fit rounded-sm border border-ink px-1 text-[10px] font-bold whitespace-nowrap uppercase"
+                      style={{ background: FOOD_COLORS[l.food] }}
+                    >
+                      {FOODS[l.food].tag}
+                    </span>
                   </span>
-                  <span
-                    className="w-fit rounded-sm border border-ink px-1 text-[10px] font-bold whitespace-nowrap uppercase"
-                    style={{ background: FOOD_COLORS[l.food] }}
-                  >
-                    {FOODS[l.food].tag}
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="sticker w-full rounded-2xl bg-white px-3 py-2.5">
-          <div className="flex items-baseline justify-between">
-            <p className="display m-0 text-[15px]">WHO THE SUB BLAMED</p>
-            <p className="m-0 text-[12px] text-ink-soft">
-              {result.totalPlayers} sniffer
-              {result.totalPlayers === 1 ? '' : 's'}
-            </p>
-          </div>
-          <div className="mt-1.5 flex flex-col gap-1.5">
-            {rows.map((r) => (
-              <div key={r.id} className="flex items-center gap-2">
-                <span
-                  className={`w-[58px] text-[13.5px] ${r.id === result.culprit ? 'font-bold' : ''}`}
-                >
-                  {CAST[r.id].name}
-                </span>
-                <div className="h-4 flex-1 overflow-hidden rounded-lg border-2 border-ink bg-paper">
-                  <div
-                    className="h-full border-r-2 border-ink"
-                    style={{
-                      width: r.count ? r.width : '0%',
-                      background:
-                        r.id === result.culprit ? '#FF5A36' : '#8FE3D6',
-                    }}
-                  />
                 </div>
-                <span
-                  className={`w-9 text-right text-[13.5px] tabular-nums ${r.id === result.culprit ? 'font-bold' : ''}`}
-                >
-                  {r.pct}%
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="m-0 mt-2 text-[13px] font-medium">
-            {result.correct
-              ? `You’re in the ${rightPct}% who sniffed it out.`
-              : `Only ${rightPct}% sniffed out ${CAST[result.culprit].name}.`}
+              ))}
+            </div>
+          </section>
+        )}
+
+        {pending ? (
+          <p className="m-0 text-[13px] font-bold text-ink-soft">
+            Counting everyone’s votes…
           </p>
-        </section>
+        ) : (
+          <section className="sticker rise w-full rounded-2xl bg-white px-3 py-2.5">
+            <div className="flex items-baseline justify-between">
+              <p className="display m-0 text-[15px]">WHO THE SUB BLAMED</p>
+              <p className="m-0 text-[12px] text-ink-soft">
+                {result.totalPlayers} sniffer
+                {result.totalPlayers === 1 ? '' : 's'}
+              </p>
+            </div>
+            <div className="mt-1.5 flex flex-col gap-1.5">
+              {rows.map((r) => (
+                <div key={r.id} className="flex items-center gap-2">
+                  <span
+                    className={`w-[58px] text-[13.5px] ${r.id === result.culprit ? 'font-bold' : ''}`}
+                  >
+                    {CAST[r.id].name}
+                  </span>
+                  <div className="h-4 flex-1 overflow-hidden rounded-lg border-2 border-ink bg-paper">
+                    <div
+                      className="h-full border-r-2 border-ink"
+                      style={{
+                        width: r.count ? r.width : '0%',
+                        background:
+                          r.id === result.culprit ? '#FF5A36' : '#8FE3D6',
+                      }}
+                    />
+                  </div>
+                  <span
+                    className={`w-9 text-right text-[13.5px] tabular-nums ${r.id === result.culprit ? 'font-bold' : ''}`}
+                  >
+                    {r.pct}%
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="m-0 mt-2 text-[13px] font-medium">
+              {result.correct
+                ? `You’re in the ${rightPct}% who sniffed it out.`
+                : `Only ${rightPct}% sniffed out ${CAST[result.culprit].name}.`}
+            </p>
+          </section>
+        )}
 
         <section className="w-full rounded-2xl border-2 border-dashed border-ink bg-white/80 px-3 py-2">
           <p className="m-0 text-[11px] font-bold text-ink-soft">
@@ -273,7 +294,7 @@ export const Result = ({ c, result, commented }: Props) => {
         <button
           type="button"
           className="btn display flex w-full items-center justify-center gap-2 rounded-xl bg-tomato py-2.5 text-[21px] disabled:bg-mint disabled:opacity-100"
-          disabled={comment !== 'idle'}
+          disabled={pending || comment !== 'idle'}
           onClick={() => void postVerdict()}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">

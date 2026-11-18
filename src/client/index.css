@@ -149,12 +149,16 @@ body {
 }
 
 @keyframes spin-slow {
+  from {
+    transform: rotate(-40deg) scale(0.85);
+  }
   to {
-    transform: rotate(360deg);
+    transform: rotate(0deg) scale(1);
   }
 }
+/* The starburst swings in once and then stays still (cheap on phones). */
 .burst-spin {
-  animation: spin-slow 24s linear infinite;
+  animation: spin-slow 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
 
 @keyframes rise {
@@ -232,6 +236,7 @@ body {
   }
 }
 .particle {
+  will-change: transform, opacity;
   position: absolute;
   left: 50%;
   top: 48%;
@@ -254,6 +259,7 @@ body {
   }
 }
 .puff {
+  will-change: transform, opacity;
   position: absolute;
   left: 50%;
   top: 55%;
@@ -265,5 +271,51 @@ body {
   .particle,
   .puff {
     display: none;
+  }
+}
+
+/* A nervous suspect (named by the open clue) shivers a few times. */
+@keyframes shiver {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-2px) rotate(-3deg);
+  }
+  75% {
+    transform: translateX(2px) rotate(3deg);
+  }
+}
+.shiver {
+  animation: shiver 0.28s ease-in-out 4;
+}
+
+/* Speech bubbles ("Phew!", "Prove it!") bounce in above a suspect. */
+@keyframes bubble-in {
+  0% {
+    transform: translateX(-50%) scale(0.3) translateY(10px);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(-50%) scale(1.15) translateY(-2px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+.bubble-in {
+  animation: bubble-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shiver,
+  .bubble-in {
+    animation: none;
+  }
+  .bubble-in {
+    transform: translateX(-50%);
   }
 }

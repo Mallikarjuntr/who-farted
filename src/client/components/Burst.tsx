@@ -13,7 +13,7 @@ type Piece = {
 
 /** Spread pieces evenly around a circle so the burst looks full without randomness. */
 function pieces(win: boolean): Piece[] {
-  const count = win ? 28 : 7;
+  const count = win ? 18 : 6;
   return Array.from({ length: count }, (_, i) => {
     const angle = (i / count) * Math.PI * 2 + (i % 2) * 0.2;
     const distance = win ? 120 + (i % 4) * 28 : 30;
@@ -22,7 +22,7 @@ function pieces(win: boolean): Piece[] {
       dy: Math.round(Math.sin(angle) * distance * (win ? 0.85 : 0.4)),
       rot: (i % 2 ? 1 : -1) * (180 + i * 37),
       delay: win ? (i % 5) * 40 : i * 120,
-      shape: win ? (i % 3 === 0 ? 'star' : 'rect') : 'cloud',
+      shape: win ? (i % 4 === 0 ? 'star' : 'rect') : 'cloud',
       color: win ? (COLORS[i % COLORS.length] ?? '#FFC93C') : '#B8D94A',
     };
   });
@@ -48,7 +48,7 @@ export const Burst = ({ win }: Props) => (
       <span key={i} ref={setVars(piece)} className={win ? 'particle' : 'puff'}>
         {piece.shape === 'rect' && (
           <span
-            className="block h-[10px] w-[6px] rounded-[2px] border border-ink"
+            className="block h-[11px] w-[7px] rounded-[2px]"
             style={{ background: piece.color }}
           />
         )}

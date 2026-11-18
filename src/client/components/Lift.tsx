@@ -104,6 +104,9 @@ export const Lift = ({
             const isSelected = selected === s.id;
             const isRead = read.has(s.id);
             const lunch = tags.get(s.id) ?? [];
+            const nervous = !isCrossed && moods?.get(s.id) === 'nervous';
+            // A freshly cleared suspect stays in colour while saying "Phew!".
+            const fading = isCrossed && bubble?.id !== s.id;
             return (
               <button
                 key={key}
@@ -120,8 +123,16 @@ export const Lift = ({
                     ?
                   </span>
                 )}
+                {nervous && (
+                  <span
+                    className="pop absolute top-1 left-0 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-ink bg-tomato text-[15px] font-black"
+                    aria-hidden="true"
+                  >
+                    !
+                  </span>
+                )}
                 <div
-                  className={`relative w-[84%] ${shaking === s.id ? 'shake' : ''}`}
+                  className={`relative w-[84%] ${shaking === s.id ? 'shake' : nervous ? 'shiver' : ''}`}
                 >
                   <Suspect
                     id={s.id}
@@ -131,13 +142,13 @@ export const Lift = ({
                         : (moods?.get(s.id) ??
                           (isSelected ? 'shifty' : 'neutral'))
                     }
-                    className={`block w-full ${isCrossed ? 'opacity-40 grayscale' : ''}`}
+                    className={`block w-full transition-[opacity,filter] duration-500 ${fading ? 'opacity-40 grayscale' : ''}`}
                   />
                   {isCrossed && <Cross />}
                   {bubble?.id === s.id && (
                     <span
                       key={bubble.key}
-                      className="pop display pointer-events-none absolute -top-3 left-1/2 z-20 -translate-x-1/2 rounded-xl border-2 border-ink bg-white px-2 text-[13px] whitespace-nowrap shadow-[2px_2px_0_#141414]"
+                      className="bubble-in display pointer-events-none absolute -top-1 left-1/2 z-20 rounded-xl border-[2.5px] border-ink bg-white px-2.5 py-0.5 text-[16px] whitespace-nowrap shadow-[3px_3px_0_#141414]"
                     >
                       {bubble.text}
                     </span>

@@ -185,6 +185,15 @@ const Game = ({
   const [seconds, setSeconds] = useState(0);
   const startRef = useRef<number | null>(null);
   const [sound, setSound] = useState(soundOn);
+  const [pending, setPending] = useState(false);
+  // With every clue, exactly one person fits: that is the answer.
+  const localCulprit = useMemo(() => {
+    const left = possibleCulprits(
+      analysis,
+      c.testimonies.map((_, i) => i)
+    );
+    return left.length === 1 ? (left[0] ?? null) : null;
+  }, [analysis, c.testimonies]);
   const [bubble, setBubble] = useState<{
     id: SuspectId;
     text: string;
@@ -197,7 +206,7 @@ const Game = ({
     setBubble({ id, text, key });
     window.setTimeout(
       () => setBubble((current) => (current?.key === key ? null : current)),
-      1600
+      2200
     );
   };
 
@@ -368,6 +377,31 @@ const Game = ({
       }
       return;
     }
+    // The game already knows the answer, so reveal it instantly and let the
+    // server's numbers (blame split, streak) arrive a moment later.
+    if (localCulprit) {
+      const correct = id === localCulprit;
+      if (correct) {
+        sfx.win();
+      } else {
+        sfx.lose();
+      }
+      setResult({
+        correct,
+        guessed: id,
+        culprit: localCulprit,
+        lunches: [],
+        seconds,
+        cluesRead: read.size,
+        hints,
+        blame: [],
+        totalPlayers: 0,
+        streak: null,
+      });
+      setPending(true);
+      setAccusing(false);
+      setConfirm(null);
+    }
     setSending(true);
     try {
       const res = await postAccuse({
@@ -378,16 +412,22 @@ const Game = ({
         hints,
       });
       trackEnd(res.result.correct, seconds, read.size);
-      if (res.result.correct) {
-        sfx.win();
-      } else {
-        sfx.lose();
+      if (!localCulprit) {
+        if (res.result.correct) {
+          sfx.win();
+        } else {
+          sfx.lose();
+        }
       }
       setResult(res.result);
+      setPending(false);
       setAccusing(false);
       setConfirm(null);
     } catch (err) {
       console.error(err);
+      // The guess didn't reach the server: go back to the lift so it can be sent again.
+      setResult(null);
+      setPending(false);
       setNote({ tone: 'warn', text: 'Something went wrong. Try again.' });
     } finally {
       setSending(false);
@@ -395,7 +435,9 @@ const Game = ({
   };
 
   if (result) {
-    return <Result c={c} result={result} commented={commented} />;
+    return (
+      <Result c={c} result={result} commented={commented} pending={pending} />
+    );
   }
 
   if (practiceLost) {
