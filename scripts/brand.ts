@@ -36,28 +36,38 @@ const LINEUP: [SuspectId, Mood][] = [
   ['marcel', 'nervous'],
 ];
 
-// 1920 x 384: Reddit's recommended banner size. Everything important sits in
-// the middle so phones (which crop the sides) still show the logo and faces.
-const banner = `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}
-body { width: 1920px; height: 384px; }
-.wrap { position: relative; width: 1920px; height: 384px; display: flex; align-items: center; justify-content: center; gap: 48px; }
-.left { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; transform: rotate(-2deg); }
-.tag { font-family: 'Rubik'; font-weight: 700; font-size: 26px; color: #141414; }
-.chip { font-family: 'Luckiest Guy'; font-size: 26px; padding: 6px 14px 2px; border: 4px solid #141414; box-shadow: 4px 4px 0 #141414; background: #FF5A36; transform: rotate(-3deg); }
-.lift { position: relative; display: flex; align-items: flex-end; gap: 6px; padding: 26px 26px 10px; background: #CDEEE8; border: 6px solid #141414; border-radius: 28px; box-shadow: 9px 9px 0 #141414; }
-.lift .bubble { position: absolute; top: -26px; left: 100px; font-size: 24px; transform: rotate(-5deg); }
-.cloud { position: absolute; top: -40px; right: -46px; transform: rotate(8deg); }
+// Reddit shows banners as a thin strip (at least 1072 x 128 on desktop and
+// 1080 x 128 in the app), so both are about 8.4 times wider than tall. We
+// render them at double size so they stay sharp.
+const desktopBanner = `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}
+body { width: 2144px; height: 256px; }
+.wrap { width: 2144px; height: 256px; display: flex; align-items: center; justify-content: center; gap: 56px; }
+.left { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; transform: rotate(-2deg); }
+.tag { font-family: 'Rubik'; font-weight: 800; font-size: 30px; color: #141414; }
+.lift { position: relative; display: flex; align-items: flex-end; gap: 4px; padding: 16px 20px 6px; background: #CDEEE8; border: 6px solid #141414; border-radius: 24px; box-shadow: 8px 8px 0 #141414; }
+.lift .bubble { position: absolute; top: -20px; left: 92px; font-size: 24px; transform: rotate(-5deg); }
+.cloud { position: absolute; top: -30px; right: -40px; transform: rotate(8deg); }
 </style></head><body class="halftone"><div class="wrap">
   <div class="left">
-    <div class="logo" style="font-size:104px">WHO FARTED?</div>
+    <div class="logo" style="font-size:110px">WHO FARTED?</div>
     <div class="tag">A new elevator every day. Six suspects. One guess.</div>
-    <div class="chip">NEW CASE EVERY DAY</div>
   </div>
   <div class="lift">
-    ${LINEUP.map(([id, mood]) => suspectSvg(id, mood, 126)).join('')}
+    ${LINEUP.map(([id, mood]) => suspectSvg(id, mood, 150)).join('')}
     <div class="bubble">NOT ME!</div>
-    <div class="cloud">${cloud(120)}</div>
+    <div class="cloud">${cloud(110)}</div>
   </div>
+</div></body></html>`;
+
+// The app shows the banner tiny on a phone, so: just the logo, big, with faces.
+const mobileBanner = `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}
+body { width: 2160px; height: 256px; }
+.wrap { width: 2160px; height: 256px; display: flex; align-items: center; justify-content: center; gap: 36px; }
+.faces { display: flex; align-items: flex-end; gap: 6px; padding-top: 40px; }
+</style></head><body class="halftone"><div class="wrap">
+  <div class="faces">${suspectSvg('agnes', 'shifty', 200)}${suspectSvg('brock', 'nervous', 200)}</div>
+  <div class="logo" style="font-size:150px; transform: rotate(-2deg)">WHO FARTED?</div>
+  <div class="faces">${suspectSvg('biscuit', 'guilty', 200)}${suspectSvg('marcel', 'nervous', 200)}</div>
 </div></body></html>`;
 
 // 512 x 512 icon. Reddit shows icons as circles, so the art stays inside one.
@@ -74,7 +84,8 @@ body { width: 512px; height: 512px; }
 </div></body></html>`;
 
 const files: [string, string, number, number][] = [
-  ['banner', banner, 1920, 384],
+  ['banner-desktop', desktopBanner, 2144, 256],
+  ['banner-mobile', mobileBanner, 2160, 256],
   ['icon', icon, 512, 512],
 ];
 

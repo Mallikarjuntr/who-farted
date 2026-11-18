@@ -7,9 +7,11 @@ Everything here is done on reddit.com with your moderator account, in **Mod Tool
 | Setting | What to use |
 | --- | --- |
 | **Avatar / icon** | `branding/icon.png` (512 × 512) |
-| **Banner** | `branding/banner.png` (1920 × 384) |
-| **Base colour** | `#FFC93C` (sunflower yellow) |
-| **Highlight colour** | `#FF5A36` (tomato) |
+| **Banner image** (desktop) | `branding/banner-desktop.png` (2144 × 256) |
+| **Mobile banner image** | `branding/banner-mobile.png` (2160 × 256) |
+| **Key color** | `#FF5A36` (tomato) |
+| **Base color** | `#FFF6E0` (cream paper) |
+| **Pinned post color** | `#FFC93C` (sunflower) |
 
 ## 2. Description (Mod Tools → General Settings → Community description)
 
