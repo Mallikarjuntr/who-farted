@@ -8,8 +8,10 @@ import {
   caseNumberFor,
   difficultyFor,
   generateCase,
+  teaserFor,
   toPublicCase,
 } from '../shared/puzzle/generator.ts';
+import { TEASERS } from '../shared/puzzle/wording.ts';
 import {
   analyzeCase,
   isProvenInnocent,
@@ -161,6 +163,35 @@ void test('the "how to solve it" steps always end with only the culprit left', (
         ruledOut.has(s.id),
         s.id !== c.solution.culprit,
         `case ${c.id} ${s.id}`
+      );
+    }
+  }
+});
+
+void test('title teasers use every line before any repeats, and never two days running', () => {
+  const size = TEASERS.length;
+  for (let start = 1; start <= 200; start += size) {
+    const cycle = new Set<string>();
+    for (let n = start; n < start + size; n++) {
+      cycle.add(teaserFor(n));
+    }
+    assert.equal(cycle.size, size, `cycle from case ${start} repeats a teaser`);
+  }
+  for (let n = 1; n < 400; n++) {
+    assert.notEqual(teaserFor(n), teaserFor(n + 1), `cases ${n} and ${n + 1}`);
+  }
+  for (const c of cases) {
+    assert.equal(c.teaser, teaserFor(c.number));
+  }
+});
+
+void test('clue lines stay short and tidy', () => {
+  for (const c of cases) {
+    for (const t of c.testimonies) {
+      assert.ok(t.quote.length <= 120, `too long in ${c.id}: ${t.quote}`);
+      assert.ok(
+        !/ {2}|\.\.(?!\.)|\bthe the\b/i.test(t.quote),
+        `untidy: ${t.quote}`
       );
     }
   }

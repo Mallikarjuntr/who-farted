@@ -307,6 +307,26 @@ export function scheduledCulprit(caseNumber: number): SuspectId {
   return must(order[index], 'scheduled culprit');
 }
 
+/**
+ * Teasers go round in a shuffled order, so a title line never repeats until
+ * every other one has been used, and never on two days in a row.
+ */
+export function teaserFor(caseNumber: number): string {
+  const size = TEASERS.length;
+  const cycleOrder = (cycle: number): string[] => {
+    const order = createRng(`who-farted:teasers:${cycle}`).shuffle(TEASERS);
+    if (cycle > 0) {
+      const previous = cycleOrder(cycle - 1);
+      if (order[0] === previous[size - 1]) {
+        order.push(must(order.shift(), 'teaser'));
+      }
+    }
+    return order;
+  };
+  const n = Math.max(caseNumber - 1, 0);
+  return must(cycleOrder(Math.floor(n / size))[n % size], 'teaser');
+}
+
 export function generateCase(date: string): CaseFile {
   const difficulty = difficultyFor(date);
   const recipe = RECIPES[difficulty];
@@ -376,7 +396,7 @@ function buildCase(
     difficulty,
     liarMode: recipe.liarMode,
     floor: 2 + rng.int(38),
-    teaser: rng.pick(TEASERS),
+    teaser: teaserFor(caseNumberFor(date)),
     menu: [...layout.menu],
     suspects: layout.suspects.map((id, i) => ({
       id,
