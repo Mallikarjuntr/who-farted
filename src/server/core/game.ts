@@ -36,16 +36,42 @@ export function caseDateForPost(): string {
  */
 const TEST_SUBREDDITS = ['who_farted_daily_dev'];
 
-export function isTestMode(): boolean {
-  return TEST_SUBREDDITS.includes((context.subredditName ?? '').toLowerCase());
+const modCache = new Map<string, { isMod: boolean; at: number }>();
+
+/**
+ * Test tools (replay, change day) appear only for moderators of the private
+ * test subreddit, so friends who playtest there play it for real.
+ */
+export async function isTestMode(): Promise<boolean> {
+  const subredditName = context.subredditName ?? '';
+  const username = context.username;
+  if (!TEST_SUBREDDITS.includes(subredditName.toLowerCase()) || !username) {
+    return false;
+  }
+  const key = `${subredditName}:${username}`.toLowerCase();
+  const hit = modCache.get(key);
+  if (hit && Date.now() - hit.at < 5 * 60 * 1000) {
+    return hit.isMod;
+  }
+  try {
+    const mods = await reddit.getModerators({ subredditName, username }).all();
+    const isMod = mods.some(
+      (m) => m.username.toLowerCase() === username.toLowerCase()
+    );
+    modCache.set(key, { isMod, at: Date.now() });
+    return isMod;
+  } catch (error) {
+    console.error('Could not check moderators', error);
+    return false;
+  }
 }
 
 /** In test mode a request may ask for any day's case; otherwise the post decides. */
-export function resolveCaseDate(requested: unknown): string {
+export async function resolveCaseDate(requested: unknown): Promise<string> {
   if (
-    isTestMode() &&
     typeof requested === 'string' &&
-    DATE_RE.test(requested)
+    DATE_RE.test(requested) &&
+    (await isTestMode())
   ) {
     return requested;
   }
@@ -280,7 +306,7 @@ export async function resetPlay(
   date: string,
   userId: string | undefined
 ): Promise<void> {
-  if (!userId || !isTestMode()) {
+  if (!userId || !(await isTestMode())) {
     return;
   }
   const play = parsePlay(await redis.hGet(keys.played(date), userId));

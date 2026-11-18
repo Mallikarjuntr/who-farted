@@ -27,7 +27,7 @@ export const api = new Hono();
 
 api.get('/case', async (c) => {
   try {
-    const date = resolveCaseDate(c.req.query('date'));
+    const date = await resolveCaseDate(c.req.query('date'));
     const [result, streak, yesterday, blame, commented] = await Promise.all([
       readResult(date, context.userId),
       readStreak(context.userId),
@@ -43,7 +43,7 @@ api.get('/case', async (c) => {
       streak,
       yesterday,
       playersSoFar: blame.total,
-      testMode: isTestMode(),
+      testMode: await isTestMode(),
       commented,
     });
   } catch (error) {
@@ -68,7 +68,7 @@ api.post('/accuse', async (c) => {
         400
       );
     }
-    const date = resolveCaseDate(Reflect.get(body, 'date'));
+    const date = await resolveCaseDate(Reflect.get(body, 'date'));
     if (!getCase(date).suspects.some((s) => s.id === suspect)) {
       return c.json<ErrorResponse>(
         { type: 'error', message: 'That suspect was not in the lift.' },
@@ -92,7 +92,7 @@ api.post('/accuse', async (c) => {
 });
 
 api.post('/test/reset', async (c) => {
-  if (!isTestMode()) {
+  if (!(await isTestMode())) {
     return c.json<ErrorResponse>(
       { type: 'error', message: 'Not available here.' },
       403
@@ -100,7 +100,7 @@ api.post('/test/reset', async (c) => {
   }
   try {
     const body: unknown = await c.req.json();
-    const date = resolveCaseDate(
+    const date = await resolveCaseDate(
       body && typeof body === 'object' ? Reflect.get(body, 'date') : undefined
     );
     await resetPlay(date, context.userId);
@@ -117,7 +117,7 @@ api.post('/test/reset', async (c) => {
 api.post('/comment', async (c) => {
   try {
     const body: unknown = await c.req.json().catch(() => ({}));
-    const date = resolveCaseDate(
+    const date = await resolveCaseDate(
       body && typeof body === 'object' ? Reflect.get(body, 'date') : undefined
     );
     const outcome = await postVerdictComment(date);
