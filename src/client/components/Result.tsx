@@ -5,6 +5,7 @@ import type { PublicCase } from '../../shared/puzzle/types';
 import { CAST, FOODS } from '../../shared/puzzle/cast';
 import { FOOD_COLORS, confession } from '../lib/clues';
 import { badgeFor, nextBadge } from '../../shared/badges';
+import { verdictFor } from '../../shared/verdict';
 import { trackAction } from '../lib/analytics';
 import { postComment } from '../lib/api';
 import { formatTime, untilNextCase } from '../lib/util';
@@ -76,15 +77,8 @@ export const Result = ({ c, result, commented, pending = false }: Props) => {
 
   const rightPct = rows.find((r) => r.id === result.culprit)?.pct ?? 0;
 
-  const verdict = [
-    `Who Farted? Case #${c.number}`,
-    result.correct
-      ? `Cracked it in ${formatTime(result.seconds)} · ${result.cluesRead}/${c.suspects.length} clues${result.hints ? ` · ${result.hints} hint${result.hints === 1 ? '' : 's'}` : ''}`
-      : `It got away from me (${formatTime(result.seconds)})`,
-    result.streak ? `Streak: ${result.streak.current} days` : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
+  const v = verdictFor(c.number, c.suspects.length, result);
+  const verdict = [v.title, v.line, v.footer].join('\n');
 
   const copyVerdict = async () => {
     try {
@@ -171,7 +165,7 @@ export const Result = ({ c, result, commented, pending = false }: Props) => {
               {pending
                 ? '…'
                 : result.streak
-                  ? `${result.streak.current} DAYS`
+                  ? `${result.streak.current} DAY${result.streak.current === 1 ? '' : 'S'}`
                   : '—'}
             </p>
             <p className="m-0 text-[11.5px] font-bold">
@@ -315,7 +309,7 @@ export const Result = ({ c, result, commented, pending = false }: Props) => {
         <p className="m-0 -mt-1 text-center text-[12.5px] text-ink-soft">
           {comment === 'posted'
             ? 'Your verdict is in the comments below. No spoilers.'
-            : 'Posts a comment from your Reddit account. No spoilers.'}{' '}
+            : 'Posts this as a comment on today’s case. No spoilers.'}{' '}
           <button
             type="button"
             className="tap border-0 bg-transparent p-0 text-[12.5px] font-bold text-ink underline"

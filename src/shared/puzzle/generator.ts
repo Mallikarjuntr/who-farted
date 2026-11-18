@@ -29,7 +29,7 @@ import { TEASERS, plainText, quoteText } from './wording.ts';
 export const SCHEDULE_START = '2026-11-18';
 
 /** Public go-live: this day is Case #1 in r/WhoFartedDaily. */
-export const LAUNCH_DATE = '2026-11-25';
+export const LAUNCH_DATE = '2026-11-20';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

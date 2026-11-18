@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { AccuseResult, CaseResponse } from '../shared/api';
-import type { PublicCase, SuspectId } from '../shared/puzzle/types';
+import type { PublicCase, Statement, SuspectId } from '../shared/puzzle/types';
 import { CAST } from '../shared/puzzle/cast';
 import {
   analyzeCase,
@@ -53,6 +53,16 @@ import {
 } from './lib/util';
 
 type Note = { tone: 'info' | 'warn' | 'good'; text: string } | null;
+
+/** Clues about lunches, where the one-lunch rule matters. */
+const FOOD_KINDS: readonly Statement['kind'][] = [
+  'culpritAte',
+  'culpritDidNotEat',
+  'ate',
+  'didNotEat',
+  'sameMeal',
+  'foodCount',
+];
 
 const Rules = ({
   liarMode,
@@ -257,6 +267,7 @@ const Game = ({
   const tags = useMemo(() => lunchTags(readStatements), [readStatements]);
   const chips = useMemo(() => profileChips(readStatements), [readStatements]);
   const facts = useMemo(() => groupFacts(readStatements), [readStatements]);
+  const aboutFood = readStatements.some((st) => FOOD_KINDS.includes(st.kind));
   const coach = practice ? coachStep(read, crossed) : null;
 
   const testimony = selected ? c.testimonies[indexOf(selected)] : undefined;
@@ -329,6 +340,28 @@ const Game = ({
     );
   };
 
+  /** Names the fewest clues already read that clear someone, so a hint teaches why. */
+  const clearHint = (id: SuspectId): string => {
+    const who = CAST[id].name;
+    const speaker = (i: number): string => {
+      const t = c.testimonies[i];
+      return t ? `${CAST[t.speaker].name}’s clue` : 'a clue';
+    };
+    const single = readIndexes.find((i) => isProvenInnocent(analysis, [i], id));
+    if (single !== undefined) {
+      const plain = c.testimonies[single]?.plain ?? '';
+      return `You can mark ${who} innocent. Why? ${speaker(single)}: “${plain}”`;
+    }
+    for (const i of readIndexes) {
+      for (const j of readIndexes) {
+        if (i < j && isProvenInnocent(analysis, [i, j], id)) {
+          return `You can mark ${who} innocent. Why? Put ${speaker(i)} and ${speaker(j)} together.`;
+        }
+      }
+    }
+    return `You can mark ${who} innocent. Why? Put the clues you’ve read together.`;
+  };
+
   const hint = () => {
     setHints((h) => h + 1);
     if (!practice) {
@@ -338,10 +371,7 @@ const Game = ({
       (s) => !crossed.has(s.id) && isProvenInnocent(analysis, readIndexes, s.id)
     );
     if (clearable) {
-      setNote({
-        tone: 'info',
-        text: `You can mark ${CAST[clearable.id].name} innocent now.`,
-      });
+      setNote({ tone: 'info', text: clearHint(clearable.id) });
       return;
     }
     const unread = c.suspects.find((s) => !read.has(s.id));
@@ -685,6 +715,11 @@ const Game = ({
                   </span>
                 ))}
               </div>
+              {aboutFood && (
+                <p className="m-0 mt-1.5 text-[12.5px] font-medium text-ink-soft">
+                  Everyone ate just ONE lunch.
+                </p>
+              )}
             </section>
           )}
         </div>

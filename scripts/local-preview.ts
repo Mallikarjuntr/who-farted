@@ -10,6 +10,9 @@ const date = process.argv[2] ?? new Date().toISOString().slice(0, 10);
 const port = Number(process.argv[3] ?? '5178');
 const root = join(import.meta.dirname, '..', 'dist', 'client');
 let c = generateCase(date);
+// NEW_PLAYER=1 shows the game the way a first-time visitor sees it on launch
+// day: no test bar, no streak, no results from yesterday.
+const newPlayer = process.env['NEW_PLAYER'] === '1';
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html',
@@ -37,17 +40,19 @@ createServer(async (req, res) => {
       case: toPublicCase(c),
       username: 'local_tester',
       result,
-      streak: { current: 6, best: 9 },
-      yesterday: {
-        number: c.number - 1,
-        culprit: 'linda',
-        topBlamed: 'agnes',
-        topBlamedPct: 64,
-        correctPct: 21,
-        totalPlayers: 812,
-      },
+      streak: newPlayer ? { current: 0, best: 0 } : { current: 6, best: 9 },
+      yesterday: newPlayer
+        ? null
+        : {
+            number: c.number - 1,
+            culprit: 'linda',
+            topBlamed: 'agnes',
+            topBlamedPct: 64,
+            correctPct: 21,
+            totalPlayers: 812,
+          },
       playersSoFar: 0,
-      testMode: true,
+      testMode: !newPlayer,
       commented: false,
     };
     res
@@ -75,7 +80,9 @@ createServer(async (req, res) => {
       hints: input.hints,
       blame: blame.sort((a, b) => b.count - a.count),
       totalPlayers: blame.reduce((t, b) => t + b.count, 0),
-      streak: { current: 7, best: 9 },
+      streak: newPlayer
+        ? { current: input.suspect === c.solution.culprit ? 1 : 0, best: 1 }
+        : { current: 7, best: 9 },
     };
     res
       .writeHead(200, { 'Content-Type': 'application/json' })

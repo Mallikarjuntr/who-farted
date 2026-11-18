@@ -39,8 +39,8 @@ void test('case numbers and weekly difficulty', () => {
   assert.equal(caseNumberFor(addDays(LAUNCH_DATE, 9)), 10);
   // The test week before launch has its own numbers, then launch is #1.
   assert.equal(caseNumberFor(SCHEDULE_START), 1);
-  assert.equal(caseNumberFor(addDays(LAUNCH_DATE, -1)), 7);
-  assert.equal(scheduleIndex(LAUNCH_DATE), 8);
+  assert.equal(caseNumberFor(addDays(LAUNCH_DATE, -1)), 2);
+  assert.equal(scheduleIndex(LAUNCH_DATE), 3);
   assert.equal(difficultyFor('2026-11-23'), 'easy'); // Monday
   assert.equal(difficultyFor('2026-11-25'), 'medium'); // Wednesday
   assert.equal(difficultyFor('2026-11-29'), 'hard'); // Sunday

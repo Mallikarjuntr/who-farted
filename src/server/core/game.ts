@@ -10,6 +10,7 @@ import type { CaseFile, SuspectId } from '../../shared/puzzle/types.ts';
 import { SUSPECT_IDS } from '../../shared/puzzle/cast.ts';
 import { generateCase } from '../../shared/puzzle/generator.ts';
 import { badgeFor } from '../../shared/badges.ts';
+import { verdictFor } from '../../shared/verdict.ts';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -331,35 +332,10 @@ export async function hasCommented(
   return Boolean(await redis.hGet(keys.commented(date), userId));
 }
 
-function clock(totalSeconds: number): string {
-  const s = Math.max(0, Math.round(totalSeconds));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-}
-
 /** The spoiler-free verdict a player can post under the case. */
 export function verdictText(c: CaseFile, result: AccuseResult): string {
-  const lines = [`**Who Farted? Case #${c.number}**`];
-  if (result.correct) {
-    const parts = [
-      `Cracked it in ${clock(result.seconds)}`,
-      `${result.cluesRead}/${c.suspects.length} clues`,
-    ];
-    if (result.hints > 0) {
-      parts.push(`${result.hints} hint${result.hints === 1 ? '' : 's'}`);
-    }
-    if (result.streak) {
-      parts.push(
-        `streak ${result.streak.current} day${result.streak.current === 1 ? '' : 's'}`
-      );
-    }
-    lines.push(parts.join(' · '));
-  } else {
-    lines.push(
-      `The farter got away from me this time (${clock(result.seconds)}). Back tomorrow!`
-    );
-  }
-  lines.push('*No spoilers. Can you find the farter?*');
-  return lines.join('\n\n');
+  const v = verdictFor(c.number, c.suspects.length, result);
+  return [`**${v.title}**`, v.line, `*${v.footer}*`].join('\n\n');
 }
 
 export type CommentOutcome = 'posted' | 'already' | 'not-played' | 'no-user';
