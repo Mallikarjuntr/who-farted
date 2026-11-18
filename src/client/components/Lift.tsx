@@ -2,6 +2,7 @@ import type { PlacedSuspect, SuspectId } from '../../shared/puzzle/types';
 import { CAST, COL_LABELS, ROW_LABELS } from '../../shared/puzzle/cast';
 import type { LunchTag, Zone } from '../lib/clues';
 import { FOOD_COLORS, cellKey } from '../lib/clues';
+import type { Mood } from './Suspect';
 import { Suspect } from './Suspect';
 
 type Props = {
@@ -14,6 +15,10 @@ type Props = {
   tags: Map<SuspectId, LunchTag[]>;
   /** In the practice case, the person the coach wants you to tap. */
   pulse?: SuspectId | null;
+  /** Faces for people the current clue talks about (nervous) and so on. */
+  moods?: Map<SuspectId, Mood>;
+  /** A short speech bubble above one suspect, e.g. "Phew!". */
+  bubble?: { id: SuspectId; text: string; key: number } | null;
   onSelect: (id: SuspectId) => void;
 };
 
@@ -56,6 +61,8 @@ export const Lift = ({
   zone,
   tags,
   pulse,
+  moods,
+  bubble,
   onSelect,
 }: Props) => (
   <div className="sticker rounded-2xl bg-lift px-1.5 pt-1.5 pb-1">
@@ -118,10 +125,23 @@ export const Lift = ({
                 >
                   <Suspect
                     id={s.id}
-                    mood={isSelected ? 'shifty' : 'neutral'}
+                    mood={
+                      isCrossed
+                        ? 'relieved'
+                        : (moods?.get(s.id) ??
+                          (isSelected ? 'shifty' : 'neutral'))
+                    }
                     className={`block w-full ${isCrossed ? 'opacity-40 grayscale' : ''}`}
                   />
                   {isCrossed && <Cross />}
+                  {bubble?.id === s.id && (
+                    <span
+                      key={bubble.key}
+                      className="pop display pointer-events-none absolute -top-3 left-1/2 z-20 -translate-x-1/2 rounded-xl border-2 border-ink bg-white px-2 text-[13px] whitespace-nowrap shadow-[2px_2px_0_#141414]"
+                    >
+                      {bubble.text}
+                    </span>
+                  )}
                 </div>
                 <span
                   className={`-mt-1 rounded-md border-2 border-ink px-1.5 text-[11.5px] font-bold tracking-wide ${

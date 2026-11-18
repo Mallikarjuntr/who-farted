@@ -13,6 +13,23 @@ import { formatTime, rememberOpenSuspect, untilNextCase } from './lib/util';
 
 const SLOTS = [0, 1, 2, 3, 4, 5];
 
+const DENIALS = [
+  'WASN’T ME!',
+  'NOT ME!',
+  'DON’T LOOK AT ME!',
+  'I SMELL NOTHING!',
+];
+
+const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+/** "MON · EASY", "WED · MEDIUM", "SAT · SOMEONE LIES". */
+function dayLabel(date: string, difficulty: string): string {
+  const day = DAYS[new Date(`${date}T00:00:00Z`).getUTCDay()] ?? '';
+  const level =
+    difficulty === 'hard' ? 'SOMEONE LIES' : difficulty.toUpperCase();
+  return `${day} · ${level}`;
+}
+
 export const Splash = () => {
   const [data, setData] = useState<CaseResponse | null>(null);
   const [failed, setFailed] = useState(false);
@@ -34,6 +51,8 @@ export const Splash = () => {
   };
 
   const c = data?.case;
+  // One suspect protests their innocence on the card; it changes every day.
+  const talker = c ? c.suspects[c.number % c.suspects.length]?.id : undefined;
   const result = data?.result;
   const yesterday = data?.yesterday;
 
@@ -42,10 +61,14 @@ export const Splash = () => {
       <div className="mx-auto flex h-full max-w-[520px] flex-col items-center gap-[1.5vh] px-3 pt-3 pb-3">
         <div className="flex w-full items-center justify-between">
           <span className="display sticker-sm -rotate-6 bg-sun px-2 text-[15px]">
-            {c ? `CASE #${c.number}` : 'CASE #…'}
+            {c ? `CASE #${c.number} · FL ${c.floor}` : 'CASE #…'}
           </span>
-          <span className="sticker-sm rotate-3 rounded-md bg-white px-2 py-0.5 text-[12px] font-bold">
-            {c ? `FLOOR ${c.floor}` : 'FLOOR …'}
+          <span
+            className={`sticker-sm rotate-3 rounded-md px-2 py-0.5 text-[12px] font-bold ${
+              c?.liarMode ? 'bg-tomato' : 'bg-white'
+            }`}
+          >
+            {c ? dayLabel(c.id, c.difficulty) : '…'}
           </span>
         </div>
 
@@ -68,15 +91,26 @@ export const Splash = () => {
                 <button
                   key={i}
                   type="button"
-                  className="tap flex h-full max-h-[100px] items-end justify-center border-0 bg-transparent p-0"
+                  className="tap relative flex h-full max-h-[100px] items-end justify-center border-0 bg-transparent p-0"
                   aria-label={`Question ${CAST[s.id].name}`}
                   onClick={(e) => open(e, s.id)}
                 >
                   <Suspect
                     id={s.id}
-                    mood={i % 2 === 0 ? 'shifty' : 'neutral'}
+                    mood={
+                      s.id === talker
+                        ? 'nervous'
+                        : i % 2 === 0
+                          ? 'shifty'
+                          : 'neutral'
+                    }
                     className="h-full max-h-[100px] w-auto"
                   />
+                  {s.id === talker && c && (
+                    <span className="display pop pointer-events-none absolute -top-1 left-1/2 z-10 -translate-x-1/2 -rotate-6 rounded-xl border-2 border-ink bg-white px-2 text-[14px] whitespace-nowrap shadow-[2px_2px_0_#141414]">
+                      {DENIALS[c.number % DENIALS.length]}
+                    </span>
+                  )}
                 </button>
               );
             })}

@@ -1,7 +1,8 @@
 import type { SVGAttributes } from 'react';
 import type { SuspectId } from '../../shared/puzzle/types';
 
-export type Mood = 'neutral' | 'shifty' | 'guilty' | 'smug';
+export type Mood =
+  'neutral' | 'shifty' | 'nervous' | 'relieved' | 'guilty' | 'smug';
 
 type Art = {
   skin: string;
@@ -125,6 +126,9 @@ const ART: Record<SuspectId, Art> = {
 const GUILTY_MOUTH = 'M42 63 Q46 59 50 63 Q54 67 58 63';
 const GUILTY_BROWS = 'M36 40 L45 43 M55 43 L64 40';
 const SMUG_MOUTH = 'M42 61 Q52 68 60 59';
+const WORRIED_BROWS = 'M36 42 L45 39 M55 39 L64 42';
+const WOBBLY_MOUTH = 'M43 63 Q46.5 61 50 63 Q53.5 65 57 63';
+const HAPPY_MOUTH = 'M42 60 Q50 68 58 60';
 const BLUSH =
   'M31 58 A6 3.5 0 1 0 43 58 A6 3.5 0 1 0 31 58 Z M57 58 A6 3.5 0 1 0 69 58 A6 3.5 0 1 0 57 58 Z';
 const SWEAT = 'M76 28 C71 36 71 42 76 43 C81 42 81 36 76 28 Z';
@@ -140,16 +144,26 @@ type Props = {
 /** A hand-drawn suspect bust in the Sticker Bomb style: thick ink outlines, flat colour. */
 export const Suspect = ({ id, mood = 'neutral', className }: Props) => {
   const a = ART[id];
-  const look = mood === 'shifty' || mood === 'guilty' ? a.look : 0;
+  const look =
+    mood === 'shifty' || mood === 'guilty' || mood === 'nervous' ? a.look : 0;
   const ey = a.cy + 2;
   const keepsOwnMouth = id === 'pip' || id === 'biscuit' || id === 'marcel';
-  const mouth =
-    mood === 'guilty' && !keepsOwnMouth
-      ? GUILTY_MOUTH
-      : mood === 'smug' && !keepsOwnMouth
-        ? SMUG_MOUTH
-        : a.mouth;
-  const brows = mood === 'guilty' && a.brows ? GUILTY_BROWS : a.brows;
+  const ownMouth: Partial<Record<Mood, string>> = {
+    guilty: GUILTY_MOUTH,
+    smug: SMUG_MOUTH,
+    nervous: WOBBLY_MOUTH,
+    relieved: HAPPY_MOUTH,
+  };
+  const mouth = (!keepsOwnMouth && ownMouth[mood]) || a.mouth;
+  const brows =
+    mood === 'guilty' && a.brows
+      ? GUILTY_BROWS
+      : mood === 'nervous' && a.brows
+        ? WORRIED_BROWS
+        : a.brows;
+  const sweats = mood === 'guilty' || mood === 'nervous';
+  // Relieved suspects close their eyes in happy little arcs.
+  const happyEyes = `M${37 + look} ${ey + 1} Q${42 + look} ${ey - 4} ${47 + look} ${ey + 1} M${53 + look} ${ey + 1} Q${58 + look} ${ey - 4} ${63 + look} ${ey + 1}`;
   const outline: SVGAttributes<SVGElement> = {
     stroke: INK,
     strokeWidth: 3.2,
@@ -179,13 +193,19 @@ export const Suspect = ({ id, mood = 'neutral', className }: Props) => {
       />
       <path d={a.hairD} fill={a.hair} {...outline} />
       {mood === 'guilty' && <path d={BLUSH} fill="#FF8FB1" />}
-      <circle cx={42 + look} cy={ey} r="3.2" fill={INK} />
-      <circle cx={58 + look} cy={ey} r="3.2" fill={INK} />
+      {mood === 'relieved' ? (
+        <path d={happyEyes} {...line} />
+      ) : (
+        <>
+          <circle cx={42 + look} cy={ey} r="3.2" fill={INK} />
+          <circle cx={58 + look} cy={ey} r="3.2" fill={INK} />
+        </>
+      )}
       {brows && <path d={brows} {...line} />}
       {mouth && <path d={mouth} {...line} />}
       {a.line && <path d={a.line} {...line} />}
       {a.top && <path d={a.top.d} fill={a.top.color} {...outline} />}
-      {mood === 'guilty' && <path d={SWEAT} fill="#7FD3F0" {...outline} />}
+      {sweats && <path d={SWEAT} fill="#7FD3F0" {...outline} />}
     </svg>
   );
 };

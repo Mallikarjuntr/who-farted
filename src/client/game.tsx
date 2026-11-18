@@ -20,9 +20,11 @@ import {
 import { Lift } from './components/Lift';
 import { Result } from './components/Result';
 import { SolveSteps } from './components/SolveSteps';
+import type { Mood } from './components/Suspect';
 import { Suspect } from './components/Suspect';
 import { fetchCase, postAccuse, resetPlay } from './lib/api';
 import { TestBar } from './components/TestBar';
+import { setSoundOn, sfx, soundOn } from './lib/sound';
 import {
   trackAction,
   trackClue,
@@ -32,6 +34,8 @@ import {
 } from './lib/analytics';
 import {
   FOOD_COLORS,
+  cellKey,
+  mentionedIn,
   groupFacts,
   lunchTags,
   meaningParts,
@@ -180,6 +184,22 @@ const Game = ({
   const [practiceLost, setPracticeLost] = useState<SuspectId | null>(null);
   const [seconds, setSeconds] = useState(0);
   const startRef = useRef<number | null>(null);
+  const [sound, setSound] = useState(soundOn);
+  const [bubble, setBubble] = useState<{
+    id: SuspectId;
+    text: string;
+    key: number;
+  } | null>(null);
+
+  /** A suspect pipes up for a moment ("Phew!", "Prove it!"). */
+  const say = (id: SuspectId, text: string) => {
+    const key = Date.now();
+    setBubble({ id, text, key });
+    window.setTimeout(
+      () => setBubble((current) => (current?.key === key ? null : current)),
+      1600
+    );
+  };
 
   const playing = !showRules && !result && !practiceWon && !practiceLost;
 
@@ -204,6 +224,7 @@ const Game = ({
   }, [playing, seconds]);
 
   const select = (id: SuspectId) => {
+    sfx.tap();
     setSelected(id);
     setNote(null);
     if (!practice && !read.has(id)) {
@@ -232,6 +253,25 @@ const Game = ({
   const testimony = selected ? c.testimonies[indexOf(selected)] : undefined;
   const zone = testimony ? zoneFor(testimony.statement, c.suspects) : null;
 
+  // Anyone the open clue names, or who stands where it says the farter was, looks nervous.
+  const moods = useMemo(() => {
+    const map = new Map<SuspectId, Mood>();
+    if (!testimony) {
+      return map;
+    }
+    for (const id of mentionedIn(testimony.statement)) {
+      map.set(id, 'nervous');
+    }
+    if (zone?.tone === 'maybe') {
+      for (const s of c.suspects) {
+        if (zone.cells.has(cellKey(s.slot))) {
+          map.set(s.id, 'nervous');
+        }
+      }
+    }
+    return map;
+  }, [testimony, zone, c.suspects]);
+
   const toggleCross = (id: SuspectId) => {
     if (crossed.has(id)) {
       setCrossed((prev) => {
@@ -247,6 +287,8 @@ const Game = ({
         trackAction('prove_it_blocked');
       }
       setShaking(id);
+      say(id, 'Prove it!');
+      sfx.boing();
       window.setTimeout(() => setShaking(null), 400);
       setNote({
         tone: 'warn',
@@ -257,6 +299,12 @@ const Game = ({
     if (!practice) {
       trackAction('mark_innocent');
     }
+    sfx.stamp();
+    say(
+      id,
+      ['Phew!', 'Told you!', 'Free at last!', 'Thank you!'][crossed.size % 4] ??
+        'Phew!'
+    );
     setCrossed((prev) => new Set(prev).add(id));
     const left = c.suspects.filter((s) => s.id !== id && !crossed.has(s.id));
     setNote(
@@ -312,8 +360,10 @@ const Game = ({
       setConfirm(null);
       setAccusing(false);
       if (id === PRACTICE_CULPRIT) {
+        sfx.win();
         setPracticeWon(true);
       } else {
+        sfx.lose();
         setPracticeLost(id);
       }
       return;
@@ -328,6 +378,11 @@ const Game = ({
         hints,
       });
       trackEnd(res.result.correct, seconds, read.size);
+      if (res.result.correct) {
+        sfx.win();
+      } else {
+        sfx.lose();
+      }
       setResult(res.result);
       setAccusing(false);
       setConfirm(null);
@@ -406,18 +461,52 @@ const Game = ({
 
   return (
     <div className="halftone min-h-full">
-      <div className="mx-auto flex min-h-full max-w-[440px] flex-col gap-3 px-3 pt-2 pb-28">
-        <header className="flex items-center justify-between">
+      <div className="mx-auto flex min-h-full max-w-[440px] flex-col gap-3 px-3 pt-2 pb-28 md:grid md:max-w-[940px] md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:items-start md:gap-x-6 md:pt-4">
+        <header className="flex items-center justify-between md:col-span-2">
           <span className="sticker-sm shrink-0 rounded-md bg-white px-1.5 py-0.5 text-[12px] font-bold whitespace-nowrap">
             {practice ? 'PRACTICE' : `#${c.number} · FL ${c.floor}`}
           </span>
-          <h1 className="logo m-0 text-[21px] leading-none whitespace-nowrap">
+          <h1 className="logo m-0 text-[19px] leading-none whitespace-nowrap md:text-[30px]">
             WHO FARTED?
           </h1>
           <div className="flex items-center gap-1.5">
             <span className="sticker-sm bg-sun px-1.5 text-[13px] font-bold tabular-nums">
               {formatTime(seconds)}
             </span>
+            <button
+              type="button"
+              aria-label={sound ? 'Turn sound off' : 'Turn sound on'}
+              aria-pressed={sound}
+              className="btn flex h-9 w-9 items-center justify-center rounded-full bg-white"
+              onClick={() => {
+                const next = !sound;
+                setSoundOn(next);
+                setSound(next);
+                if (next) {
+                  sfx.tap();
+                }
+              }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  d={
+                    sound
+                      ? 'M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11'
+                      : 'M4 9h4l5-4v14l-5-4H4zM17 9l5 6M22 9l-5 6'
+                  }
+                  fill="none"
+                  stroke="#141414"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
             <button
               type="button"
               aria-label="How to play"
@@ -436,7 +525,7 @@ const Game = ({
 
         {coach && (
           <p
-            className="sticker rise m-0 rounded-xl bg-sun px-3 py-2 text-[15px] leading-snug font-bold"
+            className="sticker rise m-0 rounded-xl bg-sun px-3 py-2 text-[15px] leading-snug font-bold md:col-span-2"
             role="status"
           >
             {coach.text}
@@ -444,113 +533,119 @@ const Game = ({
         )}
 
         {c.liarMode && (
-          <p className="sticker-sm m-0 rounded-lg bg-sun px-2 py-1 text-center text-[14px] font-bold">
+          <p className="sticker-sm m-0 rounded-lg bg-sun px-2 py-1 text-center text-[14px] font-bold md:col-span-2">
             Weekend: the farter LIES. Everyone else tells the truth.
           </p>
         )}
 
-        <Lift
-          suspects={c.suspects}
-          selected={selected}
-          read={read}
-          crossed={crossed}
-          shaking={shaking}
-          zone={zone}
-          tags={tags}
-          pulse={coach?.target ?? null}
-          onSelect={select}
-        />
+        <div className="md:sticky md:top-4">
+          <Lift
+            suspects={c.suspects}
+            selected={selected}
+            read={read}
+            crossed={crossed}
+            shaking={shaking}
+            zone={zone}
+            moods={moods}
+            bubble={bubble}
+            tags={tags}
+            pulse={coach?.target ?? null}
+            onSelect={select}
+          />
+        </div>
 
-        {testimony && selected ? (
-          <section
-            className="rise relative rounded-2xl border-[3px] border-ink bg-white px-3.5 pt-2.5 pb-3"
-            aria-live="polite"
-          >
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[13px] font-bold tracking-wide text-ink-soft">
-                {CAST[selected].name.toUpperCase()}’S CLUE
-              </span>
-              <span className="text-[11.5px] font-bold text-ink-soft">
-                {read.size} OF {c.suspects.length} READ
-              </span>
-            </div>
-            <p className="m-0 mt-1 text-[19px] leading-snug font-medium">
-              {meaningParts(testimony.plain).map((part, i) =>
-                part.food ? (
-                  <strong
-                    key={i}
-                    className="rounded-md border-2 border-ink px-1"
-                    style={{ background: FOOD_COLORS[part.food] }}
-                  >
-                    {part.text}
-                  </strong>
-                ) : part.strong ? (
-                  <strong key={i}>{part.text}</strong>
-                ) : (
-                  <span key={i}>{part.text}</span>
-                )
-              )}
-            </p>
-            {c.liarMode && (
-              <p className="m-0 mt-1 text-[13px] font-bold text-tomato">
-                This could be the farter’s lie.
-              </p>
-            )}
-            <p className="m-0 mt-2 rounded-md bg-paper px-2 py-1 text-[13px] leading-snug text-ink-soft italic">
-              {testimony.quote}
-            </p>
-            <button
-              type="button"
-              className="btn mt-2.5 w-full rounded-xl bg-white py-1.5 text-[15px] font-bold"
-              onClick={() => toggleCross(selected)}
+        <div className="flex flex-col gap-3">
+          {testimony && selected ? (
+            <section
+              className="rise relative rounded-2xl border-[3px] border-ink bg-white px-3.5 pt-2.5 pb-3"
+              aria-live="polite"
             >
-              {crossed.has(selected)
-                ? `Undo: unmark ${CAST[selected].name}`
-                : `✗ MARK ${CAST[selected].name.toUpperCase()} INNOCENT`}
-            </button>
-          </section>
-        ) : (
-          <section className="rounded-2xl border-[3px] border-dashed border-ink bg-white/70 px-3.5 py-3 text-center">
-            <p className="m-0 text-[16px] font-bold">
-              Tap a person to read their clue.
-            </p>
-          </section>
-        )}
-
-        {note && (
-          <p
-            className={`sticker-sm rise m-0 rounded-lg px-2.5 py-1.5 text-[15px] font-medium ${noteStyle}`}
-            role="status"
-          >
-            {note.text}
-          </p>
-        )}
-
-        {(chips.length > 0 || facts.length > 0) && (
-          <section className="rounded-2xl border-2 border-ink bg-white px-3 py-2">
-            <p className="display m-0 text-[14px]">
-              {c.liarMode ? 'CLUES SAY THE FARTER WAS…' : 'THE FARTER WAS…'}
-            </p>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {chips.map((chip) => (
-                <span
-                  key={chip}
-                  className="rounded-md border-2 border-ink bg-tomato/20 px-1.5 text-[13px] font-bold"
-                >
-                  {chip}
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[13px] font-bold tracking-wide text-ink-soft">
+                  {CAST[selected].name.toUpperCase()}’S CLUE
                 </span>
-              ))}
-              {facts.map((fact) => (
-                <span
-                  key={fact}
-                  className="rounded-md border-2 border-ink bg-white px-1.5 text-[13px] font-bold"
-                >
-                  {fact}
+                <span className="text-[11.5px] font-bold text-ink-soft">
+                  {read.size} OF {c.suspects.length} READ
                 </span>
-              ))}
-            </div>
-          </section>
-        )}
+              </div>
+              <p className="m-0 mt-1 text-[19px] leading-snug font-medium">
+                {meaningParts(testimony.plain).map((part, i) =>
+                  part.food ? (
+                    <strong
+                      key={i}
+                      className="rounded-md border-2 border-ink px-1"
+                      style={{ background: FOOD_COLORS[part.food] }}
+                    >
+                      {part.text}
+                    </strong>
+                  ) : part.strong ? (
+                    <strong key={i}>{part.text}</strong>
+                  ) : (
+                    <span key={i}>{part.text}</span>
+                  )
+                )}
+              </p>
+              {c.liarMode && (
+                <p className="m-0 mt-1 text-[13px] font-bold text-tomato">
+                  This could be the farter’s lie.
+                </p>
+              )}
+              <p className="m-0 mt-2 rounded-md bg-paper px-2 py-1 text-[13px] leading-snug text-ink-soft italic">
+                {testimony.quote}
+              </p>
+              <button
+                type="button"
+                className="btn mt-2.5 w-full rounded-xl bg-white py-1.5 text-[15px] font-bold"
+                onClick={() => toggleCross(selected)}
+              >
+                {crossed.has(selected)
+                  ? `Undo: unmark ${CAST[selected].name}`
+                  : `✗ MARK ${CAST[selected].name.toUpperCase()} INNOCENT`}
+              </button>
+            </section>
+          ) : (
+            <section className="rounded-2xl border-[3px] border-dashed border-ink bg-white/70 px-3.5 py-3 text-center">
+              <p className="m-0 text-[16px] font-bold">
+                Tap a person to read their clue.
+              </p>
+            </section>
+          )}
+
+          {note && (
+            <p
+              className={`sticker-sm rise m-0 rounded-lg px-2.5 py-1.5 text-[15px] font-medium ${noteStyle}`}
+              role="status"
+            >
+              {note.text}
+            </p>
+          )}
+
+          {(chips.length > 0 || facts.length > 0) && (
+            <section className="rounded-2xl border-2 border-ink bg-white px-3 py-2">
+              <p className="display m-0 text-[14px]">
+                {c.liarMode ? 'CLUES SAY THE FARTER WAS…' : 'THE FARTER WAS…'}
+              </p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {chips.map((chip) => (
+                  <span
+                    key={chip}
+                    className="rounded-md border-2 border-ink bg-tomato/20 px-1.5 text-[13px] font-bold"
+                  >
+                    {chip}
+                  </span>
+                ))}
+                {facts.map((fact) => (
+                  <span
+                    key={fact}
+                    className="rounded-md border-2 border-ink bg-white px-1.5 text-[13px] font-bold"
+                  >
+                    {fact}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t-[3px] border-ink bg-paper/95 px-3 pt-2.5 pb-3">

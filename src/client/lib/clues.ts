@@ -228,3 +228,21 @@ export function confession(id: SuspectId, food: FoodId | null): string {
   const text = CONFESSIONS[id](label);
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/** The people a clue names, so they can look nervous while it is on screen. */
+export function mentionedIn(s: Statement): SuspectId[] {
+  switch (s.kind) {
+    case 'culpritNextTo':
+    case 'culpritNotNextTo':
+    case 'culpritSameColumnAs':
+      return [s.other];
+    case 'innocent':
+    case 'ate':
+    case 'didNotEat':
+      return [s.who];
+    case 'sameMeal':
+      return [s.a, s.b];
+    default:
+      return [];
+  }
+}

@@ -215,3 +215,55 @@ body {
 .btn-test:disabled {
   opacity: 0.5;
 }
+
+/* Result celebration: confetti and stars fly out from the culprit. */
+@keyframes fly {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(0.4);
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy))
+      rotate(var(--rot)) scale(1);
+    opacity: 0;
+  }
+}
+.particle {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  opacity: 0;
+  animation: fly 1.3s cubic-bezier(0.15, 0.8, 0.3, 1) var(--delay) forwards;
+}
+
+/* A wrong guess: a few stink clouds drift up and fade. */
+@keyframes puff {
+  0% {
+    transform: translate(-50%, 0) translateX(var(--dx)) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(-50%, -110px) translateX(var(--dx)) scale(1.3);
+    opacity: 0;
+  }
+}
+.puff {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  opacity: 0;
+  animation: puff 1.8s ease-out var(--delay) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .particle,
+  .puff {
+    display: none;
+  }
+}

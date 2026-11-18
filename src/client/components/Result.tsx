@@ -8,6 +8,7 @@ import { badgeFor, nextBadge } from '../../shared/badges';
 import { trackAction } from '../lib/analytics';
 import { postComment } from '../lib/api';
 import { formatTime, untilNextCase } from '../lib/util';
+import { Burst } from './Burst';
 import { SolveSteps } from './SolveSteps';
 import { Suspect } from './Suspect';
 
@@ -89,7 +90,7 @@ export const Result = ({ c, result, commented }: Props) => {
   };
 
   return (
-    <div className="halftone min-h-full">
+    <div className="halftone min-h-full overflow-x-hidden">
       <div className="mx-auto flex max-w-[440px] flex-col items-center gap-3 px-3 pt-4 pb-6">
         <span className="sticker-sm rounded-md bg-white px-2 py-0.5 text-[12px] font-bold">
           CASE #{c.number} · FLOOR {c.floor} · CLOSED
@@ -99,6 +100,7 @@ export const Result = ({ c, result, commented }: Props) => {
         </h1>
 
         <div className="relative flex h-[214px] w-[260px] items-end justify-center">
+          <Burst win={result.correct} />
           <svg
             viewBox="0 0 260 214"
             className="burst-spin absolute inset-0 h-full w-full"
