@@ -9,7 +9,7 @@ import type { SuspectId } from '../shared/puzzle/types';
 import { CAST } from '../shared/puzzle/cast';
 import { Suspect } from './components/Suspect';
 import { fetchCase } from './lib/api';
-import { formatTime, rememberOpenSuspect } from './lib/util';
+import { formatTime, rememberOpenSuspect, untilNextCase } from './lib/util';
 
 const SLOTS = [0, 1, 2, 3, 4, 5];
 
@@ -99,14 +99,14 @@ export const Splash = () => {
             </p>
           ) : result ? (
             <p className="sticker-sm m-0 -rotate-2 bg-white px-2 py-1 text-[12.5px] leading-tight font-medium">
-              {result.correct ? 'You cracked it' : 'It got away'} in{' '}
-              {formatTime(result.seconds)}
-              {data?.streak ? (
-                <>
-                  <br />
-                  <strong>Streak: {data.streak.current} days</strong>
-                </>
-              ) : null}
+              {result.correct ? 'You cracked it in ' : 'It got away in '}
+              {formatTime(result.seconds)}.
+              <br />
+              <strong>
+                {result.correct && data?.streak && data.streak.current > 0
+                  ? `${data.streak.current}-day streak. Keep it going!`
+                  : `New case in ${untilNextCase()}. Come back!`}
+              </strong>
             </p>
           ) : yesterday ? (
             <p className="sticker-sm m-0 -rotate-2 bg-white px-2 py-1 text-[12.5px] leading-tight font-medium">
