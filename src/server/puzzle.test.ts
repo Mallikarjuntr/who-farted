@@ -5,9 +5,11 @@ import { createWorldSpace, evaluate } from '../shared/puzzle/logic.ts';
 import { explainSolution } from '../shared/puzzle/explain.ts';
 import {
   LAUNCH_DATE,
+  SCHEDULE_START,
   caseNumberFor,
   difficultyFor,
   generateCase,
+  scheduleIndex,
   teaserFor,
   toPublicCase,
 } from '../shared/puzzle/generator.ts';
@@ -29,12 +31,16 @@ function addDays(date: string, days: number): string {
 
 const cases: CaseFile[] = [];
 for (let d = 0; d < DAYS; d++) {
-  cases.push(generateCase(addDays(LAUNCH_DATE, d)));
+  cases.push(generateCase(addDays(SCHEDULE_START, d)));
 }
 
 void test('case numbers and weekly difficulty', () => {
   assert.equal(caseNumberFor(LAUNCH_DATE), 1);
   assert.equal(caseNumberFor(addDays(LAUNCH_DATE, 9)), 10);
+  // The test week before launch has its own numbers, then launch is #1.
+  assert.equal(caseNumberFor(SCHEDULE_START), 1);
+  assert.equal(caseNumberFor(addDays(LAUNCH_DATE, -1)), 7);
+  assert.equal(scheduleIndex(LAUNCH_DATE), 8);
   assert.equal(difficultyFor('2026-11-23'), 'easy'); // Monday
   assert.equal(difficultyFor('2026-11-25'), 'medium'); // Wednesday
   assert.equal(difficultyFor('2026-11-29'), 'hard'); // Sunday
@@ -181,7 +187,7 @@ void test('title teasers use every line before any repeats, and never two days r
     assert.notEqual(teaserFor(n), teaserFor(n + 1), `cases ${n} and ${n + 1}`);
   }
   for (const c of cases) {
-    assert.equal(c.teaser, teaserFor(c.number));
+    assert.equal(c.teaser, teaserFor(scheduleIndex(c.id)));
   }
 });
 

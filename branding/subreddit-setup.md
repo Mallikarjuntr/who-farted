@@ -1,4 +1,4 @@
-# r/WhoFartedDaily: setup checklist (do this on go-live day, Dec 3)
+# r/WhoFartedDaily: setup checklist (done Nov 18; go-live day is Nov 25)
 
 Everything here is done on reddit.com with your moderator account, in **Mod Tools**.
 

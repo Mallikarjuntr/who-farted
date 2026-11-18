@@ -25,18 +25,36 @@ import { analyzeStatements, solveStats } from './solver.ts';
 import { TEASERS, plainText, quoteText } from './wording.ts';
 
 /** Case #1 is the first day the game runs. */
-export const LAUNCH_DATE = '2026-11-18';
+/** The first day of the private test week. The daily schedule counts from here. */
+export const SCHEDULE_START = '2026-11-18';
+
+/** Public go-live: this day is Case #1 in r/WhoFartedDaily. */
+export const LAUNCH_DATE = '2026-11-25';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function caseNumberFor(date: string): number {
-  return (
-    Math.round(
-      (Date.parse(`${date}T00:00:00Z`) -
-        Date.parse(`${LAUNCH_DATE}T00:00:00Z`)) /
-        DAY_MS
-    ) + 1
+function daysBetween(from: string, to: string): number {
+  return Math.round(
+    (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS
   );
+}
+
+/**
+ * Which day of the schedule this is (1 = the first test day). Culprits and
+ * teasers follow this, so the test week and launch never repeat each other.
+ */
+export function scheduleIndex(date: string): number {
+  return daysBetween(SCHEDULE_START, date) + 1;
+}
+
+/**
+ * The number players see. Counts from 1 at launch; the test week before it
+ * shows its own small numbers.
+ */
+export function caseNumberFor(date: string): number {
+  return date >= LAUNCH_DATE
+    ? daysBetween(LAUNCH_DATE, date) + 1
+    : scheduleIndex(date);
 }
 
 /** Easy early in the week, a lying culprit at the weekend. */
@@ -298,11 +316,11 @@ const PICKS_PER_DRAFT = 120;
  * Every character is the culprit exactly once in each block of six cases, in a
  * shuffled order, so nobody can be ruled out just for being "never guilty".
  */
-export function scheduledCulprit(caseNumber: number): SuspectId {
-  const block = Math.floor((caseNumber - 1) / SUSPECT_IDS.length);
+export function scheduledCulprit(day: number): SuspectId {
+  const block = Math.floor((day - 1) / SUSPECT_IDS.length);
   const order = createRng(`who-farted:culprits:${block}`).shuffle(SUSPECT_IDS);
   const index =
-    (((caseNumber - 1) % SUSPECT_IDS.length) + SUSPECT_IDS.length) %
+    (((day - 1) % SUSPECT_IDS.length) + SUSPECT_IDS.length) %
     SUSPECT_IDS.length;
   return must(order[index], 'scheduled culprit');
 }
@@ -311,7 +329,7 @@ export function scheduledCulprit(caseNumber: number): SuspectId {
  * Teasers go round in a shuffled order, so a title line never repeats until
  * every other one has been used, and never on two days in a row.
  */
-export function teaserFor(caseNumber: number): string {
+export function teaserFor(day: number): string {
   const size = TEASERS.length;
   const cycleOrder = (cycle: number): string[] => {
     const order = createRng(`who-farted:teasers:${cycle}`).shuffle(TEASERS);
@@ -323,7 +341,7 @@ export function teaserFor(caseNumber: number): string {
     }
     return order;
   };
-  const n = Math.max(caseNumber - 1, 0);
+  const n = Math.max(day - 1, 0);
   return must(cycleOrder(Math.floor(n / size))[n % size], 'teaser');
 }
 
@@ -331,7 +349,7 @@ export function generateCase(date: string): CaseFile {
   const difficulty = difficultyFor(date);
   const recipe = RECIPES[difficulty];
   const rng = createRng(`who-farted:${date}`);
-  const wanted = scheduledCulprit(caseNumberFor(date));
+  const wanted = scheduledCulprit(scheduleIndex(date));
 
   for (let attempt = 0; attempt < DRAFT_ATTEMPTS; attempt++) {
     // Try hard for the scheduled culprit; fall back to anyone if it can't be done fairly.
@@ -396,7 +414,7 @@ function buildCase(
     difficulty,
     liarMode: recipe.liarMode,
     floor: 2 + rng.int(38),
-    teaser: teaserFor(caseNumberFor(date)),
+    teaser: teaserFor(scheduleIndex(date)),
     menu: [...layout.menu],
     suspects: layout.suspects.map((id, i) => ({
       id,
