@@ -83,10 +83,45 @@ body { width: 512px; height: 512px; }
   <div class="dog">${suspectSvg('biscuit', 'guilty', 430)}</div>
 </div></body></html>`;
 
+// Devpost gallery thumbnail, 3:2.
+const thumbnail = `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}
+body { width: 1500px; height: 1000px; }
+.wrap { width: 1500px; height: 1000px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 44px; }
+.lift { position: relative; display: flex; align-items: flex-end; gap: 6px; padding: 28px 34px 10px; background: #CDEEE8; border: 8px solid #141414; border-radius: 34px; box-shadow: 12px 12px 0 #141414; }
+.lift .bubble { position: absolute; top: -30px; left: 150px; font-size: 38px; transform: rotate(-5deg); }
+.cloud { position: absolute; top: -50px; right: -60px; transform: rotate(8deg); }
+.tag { font-family: 'Rubik'; font-weight: 800; font-size: 46px; color: #141414; }
+</style></head><body class="halftone"><div class="wrap">
+  <div class="logo" style="font-size:150px; transform: rotate(-2deg)">WHO FARTED?</div>
+  <div class="lift">
+    ${LINEUP.map(([id, mood]) => suspectSvg(id, mood, 210)).join('')}
+    <div class="bubble">NOT ME!</div>
+    <div class="cloud">${cloud(160)}</div>
+  </div>
+  <div class="tag">Six suspects. One lift. One guess a day.</div>
+</div></body></html>`;
+
+// Last few seconds of the demo video (portrait phone video).
+const endCard = `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}
+body { width: 1080px; height: 1920px; }
+.wrap { width: 1080px; height: 1920px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 70px; text-align: center; }
+.faces { display: grid; grid-template-columns: repeat(3, auto); gap: 18px 30px; align-items: end; }
+.week { font-family: 'Rubik'; font-weight: 800; font-size: 52px; line-height: 1.35; color: #141414; }
+.week b { color: #FF5A36; }
+.sub { font-family: 'Rubik'; font-weight: 900; font-size: 64px; color: #141414; background: #FFC93C; border: 6px solid #141414; border-radius: 22px; box-shadow: 8px 8px 0 #141414; padding: 18px 40px; }
+</style></head><body class="halftone"><div class="wrap">
+  <div class="logo" style="font-size:150px; transform: rotate(-3deg)">WHO<br>FARTED?</div>
+  <div class="faces">${LINEUP.map(([id, mood]) => suspectSvg(id, mood, 230)).join('')}</div>
+  <div class="week">A new case every day.<br>Easy on Monday.<br>Weekends: <b>the farter LIES.</b></div>
+  <div class="sub">r/WhoFartedDaily</div>
+</div></body></html>`;
+
 const files: [string, string, number, number][] = [
   ['banner-desktop', desktopBanner, 2144, 256],
   ['banner-mobile', mobileBanner, 2160, 256],
   ['icon', icon, 512, 512],
+  ['devpost-thumbnail', thumbnail, 1500, 1000],
+  ['video-end-card', endCard, 1080, 1920],
 ];
 
 const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
