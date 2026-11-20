@@ -43,6 +43,8 @@ export type CaseResponse = {
   commented: boolean;
   /** The subreddit the game is played in, for the join button. */
   subredditName: string | null;
+  /** True once this player has made a guess on any day, so the intro can be skipped. */
+  returning: boolean;
 };
 
 export type AccuseRequest = {

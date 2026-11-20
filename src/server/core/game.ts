@@ -132,6 +132,16 @@ export async function readStreak(
   };
 }
 
+/** True once the player has guessed on any day (their streak record exists). */
+export async function hasPlayedBefore(
+  userId: string | undefined
+): Promise<boolean> {
+  if (!userId) {
+    return false;
+  }
+  return Boolean(await redis.hGet(keys.streak(userId), 'last'));
+}
+
 type StoredPlay = Omit<AccuseResult, 'blame' | 'totalPlayers' | 'streak'>;
 
 function parsePlay(raw: string | undefined): StoredPlay | null {

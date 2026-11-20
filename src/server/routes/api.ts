@@ -13,6 +13,7 @@ import {
   accuse,
   getCase,
   hasCommented,
+  hasPlayedBefore,
   isSuspectId,
   isTestMode,
   readBlame,
@@ -29,13 +30,15 @@ export const api = new Hono();
 api.get('/case', async (c) => {
   try {
     const date = await resolveCaseDate(c.req.query('date'));
-    const [result, streak, yesterday, blame, commented] = await Promise.all([
-      readResult(date, context.userId),
-      readStreak(context.userId),
-      yesterdaySummary(date),
-      readBlame(date),
-      hasCommented(date, context.userId),
-    ]);
+    const [result, streak, yesterday, blame, commented, returning] =
+      await Promise.all([
+        readResult(date, context.userId),
+        readStreak(context.userId),
+        yesterdaySummary(date),
+        readBlame(date),
+        hasCommented(date, context.userId),
+        hasPlayedBefore(context.userId),
+      ]);
     return c.json<CaseResponse>({
       type: 'case',
       case: toPublicCase(getCase(date)),
@@ -47,6 +50,7 @@ api.get('/case', async (c) => {
       testMode: await isTestMode(),
       commented,
       subredditName: context.subredditName ?? null,
+      returning,
     });
   } catch (error) {
     console.error('GET /api/case failed', error);

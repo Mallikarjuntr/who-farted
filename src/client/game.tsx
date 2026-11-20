@@ -926,8 +926,19 @@ export const App = () => {
       </div>
     );
   }
-  // Players who already played today skip straight to their result.
-  if (stage === 'welcome' && (!data?.result || data.testMode)) {
+  // Wait for the server before choosing a screen, so a returning player never
+  // sees the intro flash before their result.
+  if (!data && stage === 'welcome') {
+    return (
+      <div className="halftone flex min-h-full items-center justify-center">
+        <p className="logo pop text-[34px]">SNIFFING…</p>
+      </div>
+    );
+  }
+  // Only brand-new players get the intro. Anyone who has guessed before (on
+  // any device) goes straight to the case or their result.
+  const isNewPlayer = !data?.result && !data?.returning;
+  if (stage === 'welcome' && (isNewPlayer || data?.testMode)) {
     return (
       <Welcome onPractice={() => setStage('practice')} onSkip={finishIntro} />
     );

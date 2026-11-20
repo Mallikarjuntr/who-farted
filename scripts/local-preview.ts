@@ -55,6 +55,7 @@ createServer(async (req, res) => {
       testMode: !newPlayer,
       commented: false,
       subredditName: 'WhoFartedDaily',
+      returning: !newPlayer,
     };
     res
       .writeHead(200, { 'Content-Type': 'application/json' })
