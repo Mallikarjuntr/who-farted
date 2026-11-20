@@ -1,49 +1,44 @@
-import type { Statement, SuspectId } from './types.ts';
+import type { FoodId, Statement, SuspectId } from './types.ts';
 import type { Rng } from './rng.ts';
-import {
-  CAST,
-  COL_LABELS,
-  COL_WORDS,
-  FOODS,
-  ROW_LABELS,
-  ROW_WORDS,
-} from './cast.ts';
-import { must } from './rng.ts';
+import { CAST, FOODS, atCol, atRow } from './cast.ts';
+
+/*
+ * Clue wording rules (from player feedback and plain-language research):
+ * - One fact per clue, in short, common words. No idioms or sarcasm inside a
+ *   clue: players reading English as a second language miss them.
+ * - Places use things you can see in the lift (BUTTONS, MIRROR, DOORS),
+ *   never left or right, which flip depending on who is looking.
+ * - Jokes live around the clue (teasers, reactions, confessions), not in it.
+ */
 
 const name = (id: SuspectId): string => CAST[id].name;
-const row = (r: number): string => must(ROW_WORDS[r], 'row word');
-const col = (c: number): string => must(COL_WORDS[c], 'column word');
+
+/** The lunch as one simple, plural-safe word: "beans", "eggs", "chili". */
+const dish = (food: FoodId): string => FOODS[food].tag.toLowerCase();
+const tag = (s: { food: FoodId }): string => FOODS[s.food].tag;
 
 function people(n: number): string {
   return n === 1 ? 'person' : 'people';
 }
 
-const rowLabel = (r: number): string => must(ROW_LABELS[r], 'row label');
-const colLabel = (c: number): string => must(COL_LABELS[c], 'column label');
-const tag = (s: { food: keyof typeof FOODS }): string => FOODS[s.food].tag;
-
-function onCol(c: number): string {
-  return c === 1 ? `in the ${colLabel(c)}` : `on the ${colLabel(c)}`;
-}
-
 /**
  * The exact meaning of a clue in short, simple English. Key words are in
- * capitals and match the labels printed on the lift (LEFT, BACK, …).
+ * capitals and match the labels printed on the lift (MIRROR, BACK, …).
  */
 export function plainText(s: Statement): string {
   switch (s.kind) {
     case 'culpritRow':
-      return `The farter was in the ${rowLabel(s.row)} row.`;
+      return `The farter stood ${atRow(s.row)}.`;
     case 'culpritCol':
-      return `The farter was ${onCol(s.col)}.`;
+      return `The farter stood ${atCol(s.col)}.`;
     case 'culpritNotCol':
-      return `The farter was NOT ${onCol(s.col)}.`;
+      return `The farter did NOT stand ${atCol(s.col)}.`;
     case 'culpritNextTo':
-      return `The farter stood NEXT TO ${name(s.other)} (same row).`;
+      return `The farter stood right NEXT TO ${name(s.other)}, side by side.`;
     case 'culpritNotNextTo':
-      return `The farter did NOT stand next to ${name(s.other)} (same row).`;
+      return `The farter did NOT stand next to ${name(s.other)}.`;
     case 'culpritSameColumnAs':
-      return `The farter stood in the same column as ${name(s.other)}.`;
+      return `The farter stood right in front of or behind ${name(s.other)}.`;
     case 'culpritAte':
       return `The farter ate ${tag(s)}.`;
     case 'culpritDidNotEat':
@@ -74,133 +69,122 @@ function count(n: number): string {
   return NUMBER_WORDS[n] ?? String(n);
 }
 
-/** "the middle" or "the left side" */
-function sideName(c: number): string {
-  return c === 1 ? 'the middle' : `the ${col(c)} side`;
-}
-
-/** "in the middle" or "on the left side" */
-function onSide(c: number): string {
-  return c === 1 ? 'in the middle' : `on the ${col(c)} side`;
-}
+/** "the BACK" or "the DOORS" */
+const rowThing = (r: number): string => (r === 0 ? 'the BACK' : 'the DOORS');
+/** "the BUTTONS", "the MIDDLE" or "the MIRROR" */
+const colThing = (c: number): string =>
+  c === 0 ? 'the BUTTONS' : c === 1 ? 'the MIDDLE' : 'the MIRROR';
+/** "at the BACK" or "near the DOORS" */
+const nearRow = (r: number): string =>
+  r === 0 ? 'at the BACK' : 'near the DOORS';
+/** "near the BUTTONS", "in the MIDDLE" or "near the MIRROR" */
+const nearCol = (c: number): string =>
+  c === 1 ? 'in the MIDDLE' : `near ${colThing(c)}`;
 
 function verbalCore(speaker: SuspectId, s: Statement, rng: Rng): string {
   switch (s.kind) {
     case 'culpritRow':
-      return s.row === 0
-        ? rng.pick([
-            'It came from the back of the lift.',
-            'That smell rolled in from the back wall.',
-            'The back row. No doubt about it.',
-          ])
-        : rng.pick([
-            'It came from the front, right by the doors.',
-            'Front row. I felt the breeze.',
-            'It came from the front row. No doubt about it.',
-          ]);
+      return rng.pick([
+        `The smell came from ${rowThing(s.row)}.`,
+        `I smelled it ${nearRow(s.row)}. I am sure.`,
+      ]);
     case 'culpritCol':
-      return s.col === 1
-        ? rng.pick([
-            'It came from the middle of the lift.',
-            'Dead centre. It came from the middle.',
-          ])
-        : rng.pick([
-            `It started on the ${col(s.col)} side.`,
-            `The ${col(s.col)} side. That's where it hit me first.`,
-          ]);
+      return rng.pick([
+        `The smell came from ${colThing(s.col)}.`,
+        `I smelled it ${nearCol(s.col)}. I am sure.`,
+      ]);
     case 'culpritNotCol':
       return rng.pick([
-        `Nothing came from ${sideName(s.col)}. I'd have noticed.`,
-        `The air ${onSide(s.col)} was fine. Fresh as a daisy.`,
+        `The air ${nearCol(s.col)} was clean.`,
+        `No smell ${nearCol(s.col)}. Nothing at all.`,
       ]);
     case 'culpritNextTo':
       return speaker === s.other
-        ? 'It came from right next to me. Right. Next. To. Me.'
+        ? 'It came from right next to me!'
         : rng.pick([
-            `Whoever did it was standing right beside ${name(s.other)}.`,
-            `It came from right beside ${name(s.other)}.`,
+            `It came from right next to ${name(s.other)}.`,
+            `The farter stood right beside ${name(s.other)}.`,
           ]);
     case 'culpritNotNextTo':
       return rng.pick([
-        `Whoever did it was not standing next to ${who(speaker, s.other)}.`,
-        `Nobody beside ${who(speaker, s.other)} did this. The air there was fine.`,
+        `It did not come from next to ${who(speaker, s.other)}.`,
+        `The air next to ${who(speaker, s.other)} was clean.`,
       ]);
     case 'culpritSameColumnAs':
-      return `It came from directly in front of or behind ${who(speaker, s.other)}.`;
+      return `It came from right in front of or behind ${who(speaker, s.other)}.`;
     case 'culpritAte':
       return rng.pick([
-        `That smell? Pure ${FOODS[s.food].short}. Whoever did it had ${FOODS[s.food].label}.`,
-        `Whoever did it had ${FOODS[s.food].label}. I'd know that smell anywhere.`,
+        `It smelled like ${dish(s.food)}. I am sure.`,
+        `That fart smelled of ${dish(s.food)}.`,
       ]);
     case 'culpritDidNotEat':
       return rng.pick([
-        `That was no ${FOODS[s.food].short} smell. Whoever did it didn't eat ${FOODS[s.food].label}.`,
-        `It didn't smell like ${FOODS[s.food].label} at all. Not even a bit.`,
+        `It did not smell like ${dish(s.food)} at all.`,
+        `That fart did not smell of ${dish(s.food)}.`,
       ]);
     case 'innocent':
       return rng.pick([
-        `It wasn't ${name(s.who)}. I watched ${name(s.who)} the whole ride.`,
-        `Leave ${name(s.who)} out of this. Innocent.`,
-        `${name(s.who)} is innocent. I'd bet my lunch on it.`,
+        `It was not ${name(s.who)}. I watched ${name(s.who)} the whole time.`,
+        `${name(s.who)} did not do it. ${name(s.who)} is innocent.`,
       ]);
     case 'ate':
       return speaker === s.who
         ? rng.pick([
-            `I had ${FOODS[s.food].label} for lunch. Is that a crime now?`,
-            `Yes, I had ${FOODS[s.food].label}. So what?`,
+            `I ate ${dish(s.food)} for lunch. So what?`,
+            `Yes, I had ${dish(s.food)} for lunch.`,
           ])
         : rng.pick([
-            `I saw ${name(s.who)} eating ${FOODS[s.food].label} at lunch.`,
-            `${name(s.who)} had ${FOODS[s.food].label} for lunch. I saw the whole plate.`,
+            `I saw ${name(s.who)} eat ${dish(s.food)} for lunch.`,
+            `${name(s.who)} had ${dish(s.food)} for lunch. I saw it.`,
           ]);
     case 'didNotEat':
       return speaker === s.who
         ? rng.pick([
-            `I did not have ${FOODS[s.food].label}. Not today.`,
-            `I stayed away from ${FOODS[s.food].label} today.`,
+            `I did not eat ${dish(s.food)} today.`,
+            `No ${dish(s.food)} for me today.`,
           ])
         : rng.pick([
-            `${name(s.who)} definitely didn't have ${FOODS[s.food].label}.`,
-            `${name(s.who)} never touched ${FOODS[s.food].label}.`,
+            `${name(s.who)} did not eat ${dish(s.food)}. I saw the plate.`,
+            `${name(s.who)} did not touch the ${dish(s.food)}.`,
           ]);
     case 'sameMeal':
       if (speaker === s.a || speaker === s.b) {
         const other = speaker === s.a ? s.b : s.a;
         return rng.pick([
-          `${name(other)} and I had the exact same lunch.`,
-          `${name(other)} and I ate the same thing. Twins!`,
+          `${name(other)} and I ate the same lunch.`,
+          `${name(other)} and I had the same lunch. Twins!`,
         ]);
       }
       return rng.pick([
-        `${name(s.a)} and ${name(s.b)} ordered the exact same lunch.`,
-        `${name(s.a)} and ${name(s.b)} had matching lunches. I noticed.`,
+        `${name(s.a)} and ${name(s.b)} ate the same lunch.`,
+        `${name(s.a)} and ${name(s.b)} had the same lunch. I saw it.`,
       ]);
     case 'foodCount':
       return s.count === 0
-        ? `Nobody in here had ${FOODS[s.food].label}. I asked.`
+        ? `Nobody here ate ${dish(s.food)}. I asked everyone.`
         : rng.pick([
-            `Exactly ${count(s.count)} of us had ${FOODS[s.food].label}. I counted.`,
-            `I counted. ${count(s.count).replace(/^./, (ch) => ch.toUpperCase())} of us had ${FOODS[s.food].label}. Exactly.`,
+            `Exactly ${count(s.count)} of us ate ${dish(s.food)}. I counted.`,
+            `I counted. ${count(s.count).replace(/^./, (ch) => ch.toUpperCase())} of us ate ${dish(s.food)}.`,
           ]);
   }
 }
 
-/** Each talker gets at most one catchphrase per clue, so lines stay short. */
+/** Each talker gets at most one short, plain catchphrase per clue. */
 const VOICE_WRAPS: Record<
   'agnes' | 'brock' | 'linda',
   { before: string[]; after: string[] }
 > = {
   agnes: {
-    before: ['Oh, dear. ', 'Well, I never. '],
-    after: [' Mark my words.', ' In my day, we said excuse me.'],
+    before: ['Oh dear! ', 'Oh my! '],
+    after: [' Oh dear.'],
   },
   brock: {
-    before: ['Bro. ', 'Okay, so. ', 'No cap. '],
-    after: [' Trust me, bro.', ' Leg day never lies.'],
+    before: ['Bro! ', 'Bro, listen. '],
+    after: [' Trust me, bro.'],
   },
   linda: {
-    before: ['Per my last email: ', 'For the record: '],
-    after: [' I am filing a report.', ' Noted.'],
+    before: ['For the record: ', 'Write this down: '],
+    after: [' I wrote it down.', ' Noted.'],
   },
 };
 
@@ -208,24 +192,23 @@ function toddlerAction(s: Statement, rng: Rng): string {
   switch (s.kind) {
     case 'culpritRow':
       return rng.pick([
-        `Pip points at the ${row(s.row)} row and shouts "STINKY!"`,
-        `Pip hides her face from the ${row(s.row)} row. "EWWW!"`,
+        `Pip points at ${rowThing(s.row)} and shouts “STINKY!”`,
+        `Pip hides her face from ${rowThing(s.row)}. “EWWW!”`,
       ]);
     case 'culpritCol':
       return rng.pick([
-        `Pip waddles ${s.col === 1 ? 'to the middle' : `to the ${col(s.col)} wall`}, pinches her nose and giggles.`,
-        `Pip points at ${sideName(s.col)} and holds her nose. "POO-EE!"`,
+        `Pip points at ${colThing(s.col)} and holds her nose. “POO-EE!”`,
+        `Pip walks to ${colThing(s.col)}, holds her nose and giggles.`,
       ]);
     case 'culpritNotCol':
       return rng.pick([
-        `Pip naps happily ${s.col === 1 ? 'in the middle' : `against the ${col(s.col)} wall`}. No smell there.`,
-        `Pip plays peekaboo ${onSide(s.col)}, sniffing happily. No smell there.`,
-        `Pip sits ${onSide(s.col)} eating a cookie, happy as can be. No smell there.`,
+        `Pip walks over to ${colThing(s.col)}, sniffs and smiles. No smell there.`,
+        `Pip crawls to ${colThing(s.col)} with a cookie, happy. No smell there.`,
       ]);
     case 'innocent':
       return rng.pick([
-        `Pip hugs ${name(s.who)}'s leg. Pip never hugs a farter.`,
-        `Pip gives ${name(s.who)} a gold sticker. Pip only gives stickers to good people.`,
+        `Pip hugs ${name(s.who)}. Pip only hugs people who did NOT fart.`,
+        `Pip gives ${name(s.who)} a gold star. Pip only gives stars to good people.`,
       ]);
     default:
       return 'Pip giggles.';
@@ -236,28 +219,28 @@ function dogAction(s: Statement, rng: Rng): string {
   switch (s.kind) {
     case 'ate':
       return rng.pick([
-        `Biscuit sniffs ${name(s.who)} and starts drooling. Smells like ${FOODS[s.food].label}.`,
-        `Biscuit licks ${name(s.who)}'s hand. Tastes like ${FOODS[s.food].label}.`,
+        `Biscuit sniffs ${name(s.who)} and drools. ${name(s.who)} smells of ${dish(s.food)}.`,
+        `Biscuit licks ${name(s.who)}’s hand. It tastes of ${dish(s.food)}.`,
       ]);
     case 'didNotEat':
       return rng.pick([
-        `Biscuit sniffs ${name(s.who)} and loses interest. No ${FOODS[s.food].short} smell there.`,
-        `Biscuit sniffs ${name(s.who)} and yawns. Not a whiff of ${FOODS[s.food].label}.`,
+        `Biscuit sniffs ${name(s.who)} and walks away. No ${dish(s.food)} smell.`,
+        `Biscuit sniffs ${name(s.who)} and yawns. No ${dish(s.food)} there.`,
       ]);
     case 'sameMeal':
       return rng.pick([
-        `Biscuit sniffs ${name(s.a)}, then ${name(s.b)}, and wags exactly the same way.`,
-        `Biscuit sniffs ${name(s.a)} and ${name(s.b)}, then tilts his head. Same smell!`,
+        `Biscuit sniffs ${name(s.a)}, then ${name(s.b)}. Same smell!`,
+        `Biscuit sniffs ${name(s.a)} and ${name(s.b)} and wags the same way. Same lunch!`,
       ]);
     case 'culpritAte':
       return rng.pick([
-        `Biscuit sniffs the air and drools. Whoever did it had ${FOODS[s.food].label}.`,
-        `Biscuit lifts his nose and howls. That smell was ${FOODS[s.food].label}.`,
+        `Biscuit sniffs the air and drools. The fart smells of ${dish(s.food)}.`,
+        `Biscuit howls. That fart smelled of ${dish(s.food)}.`,
       ]);
     case 'culpritDidNotEat':
       return rng.pick([
-        `Biscuit sniffs the air, unimpressed. Whatever it was, it wasn't ${FOODS[s.food].label}.`,
-        `Biscuit sniffs the air and yawns. That was NOT ${FOODS[s.food].label}.`,
+        `Biscuit sniffs the air and yawns. That fart was not ${dish(s.food)}.`,
+        `Biscuit sniffs the air. No ${dish(s.food)} in that smell.`,
       ]);
     default:
       return 'Biscuit wags.';
@@ -268,34 +251,34 @@ function mimeAction(s: Statement, rng: Rng): string {
   switch (s.kind) {
     case 'culpritRow':
       return rng.pick([
-        `Marcel mimes a wall of stink rolling in from the ${row(s.row)}.`,
-        `Marcel waves an invisible fan at the ${row(s.row)} row, eyes watering.`,
+        `Marcel points at ${rowThing(s.row)} and holds his nose.`,
+        `Marcel walks to ${rowThing(s.row)}, fans the air and holds his nose.`,
       ]);
     case 'culpritCol':
       return rng.pick([
-        `Marcel fans the air ${s.col === 1 ? 'in the middle' : `on the ${col(s.col)} side`}, gagging silently.`,
-        `Marcel points at ${sideName(s.col)}, then pretends to faint.`,
+        `Marcel points at ${colThing(s.col)}, then pretends to faint.`,
+        `Marcel walks to ${colThing(s.col)}, fans the air and holds his nose.`,
       ]);
     case 'culpritNotCol':
       return rng.pick([
-        `Marcel breathes deeply ${s.col === 1 ? 'in the middle' : `by the ${col(s.col)} wall`}. Clean air there.`,
-        `Marcel smells a pretend flower ${onSide(s.col)}. Lovely. Clean air there.`,
+        `Marcel walks to ${colThing(s.col)}, takes a deep breath and smiles. Clean air there.`,
+        `Marcel walks to ${colThing(s.col)} and smells a pretend flower. Clean air there.`,
       ]);
     case 'culpritNextTo':
       return rng.pick([
-        `Marcel points at the space right beside ${name(s.other)}, then pinches his nose.`,
-        `Marcel tiptoes up beside ${name(s.other)}, sniffs, and fans the air hard.`,
+        `Marcel points right beside ${name(s.other)} and holds his nose.`,
+        `Marcel stands beside ${name(s.other)}, sniffs, and fans the air hard.`,
       ]);
     case 'culpritNotNextTo':
       return rng.pick([
-        `Marcel sniffs the air on both sides of ${name(s.other)} and gives a thumbs up.`,
-        `Marcel stands beside ${name(s.other)}, takes a deep breath and smiles.`,
+        `Marcel sniffs both sides of ${name(s.other)} and gives a thumbs up.`,
+        `Marcel stands beside ${name(s.other)}, breathes deeply and smiles.`,
       ]);
     case 'culpritSameColumnAs':
-      return `Marcel walks an invisible line straight through ${name(s.other)}, front to back, holding his nose.`;
+      return `Marcel points in front of ${name(s.other)}, then behind, and holds his nose.`;
     case 'innocent':
       return rng.pick([
-        `Marcel places an invisible halo on ${name(s.who)}.`,
+        `Marcel draws a halo over ${name(s.who)}’s head. Innocent!`,
         `Marcel points at ${name(s.who)} and shakes his head: not guilty.`,
       ]);
     default:

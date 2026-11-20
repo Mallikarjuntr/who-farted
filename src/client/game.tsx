@@ -17,7 +17,14 @@ import {
   isProvenInnocent,
   possibleCulprits,
 } from '../shared/puzzle/solver';
+import { soLine } from '../shared/puzzle/meaning';
 import { Lift } from './components/Lift';
+import {
+  GoldenRule,
+  MeetSuspects,
+  SuspectList,
+} from './components/MeetSuspects';
+import { Meaning } from './components/Meaning';
 import { Result } from './components/Result';
 import { SolveSteps } from './components/SolveSteps';
 import type { Mood } from './components/Suspect';
@@ -33,12 +40,10 @@ import {
   trackStart,
 } from './lib/analytics';
 import {
-  FOOD_COLORS,
   cellKey,
   mentionedIn,
   groupFacts,
   lunchTags,
-  meaningParts,
   profileChips,
   zoneFor,
 } from './lib/clues';
@@ -72,35 +77,48 @@ const Rules = ({
   onClose: () => void;
 }) => (
   <div
-    className="fixed inset-0 z-30 flex items-center justify-center bg-ink/60 p-5"
+    className="fixed inset-0 z-30 flex items-center justify-center bg-ink/60 p-4"
     role="dialog"
     aria-modal="true"
     aria-labelledby="rules-title"
   >
-    <div className="sticker pop w-full max-w-[360px] rounded-2xl bg-white p-5">
-      <h2 id="rules-title" className="logo m-0 text-center text-[30px]">
-        HOW TO PLAY
-      </h2>
-      <ol className="mt-4 mb-0 flex list-none flex-col gap-3 p-0 text-[16px] leading-snug">
-        <li>
-          <strong>1. Tap a person.</strong> Read their clue.
-        </li>
-        <li>
-          <strong>2. Mark the innocent</strong> people. This is NOT your guess.
-        </li>
-        <li>
-          <strong>3. Tap GUESS THE FARTER.</strong> You get ONE guess.
-        </li>
-        {liarMode && (
-          <li className="sticker-sm rounded-lg bg-sun px-2 py-1.5">
-            <strong>Weekend:</strong> the farter LIES. Everyone else tells the
-            truth.
+    <div className="sticker pop flex max-h-full w-full max-w-[380px] flex-col rounded-2xl bg-white p-4">
+      <div className="overflow-y-auto">
+        <h2 id="rules-title" className="logo m-0 text-center text-[30px]">
+          HOW TO PLAY
+        </h2>
+        <ol className="mt-3 mb-0 flex list-none flex-col gap-2 p-0 text-[16px] leading-snug">
+          <li>
+            <strong>1. Tap a person.</strong> Read their clue.
           </li>
-        )}
-      </ol>
+          <li>
+            <strong>2. Mark the innocent</strong> people. This is NOT your
+            guess.
+          </li>
+          <li>
+            <strong>3. Tap GUESS THE FARTER.</strong> You get ONE guess.
+          </li>
+        </ol>
+        <p className="m-0 mt-3 rounded-xl border-2 border-ink bg-lift px-2.5 py-1.5 text-[14px] leading-snug">
+          <strong>Places in the lift:</strong> BUTTONS, MIDDLE, MIRROR, and BACK
+          or by the DOORS. Look for these words on the lift.
+        </p>
+        <div className="mt-2">
+          {liarMode ? (
+            <p className="sticker-sm m-0 rounded-lg bg-sun px-2 py-1.5 text-[14px]">
+              <strong>Today is a weekend:</strong> the farter LIES. Everyone
+              else tells the truth.
+            </p>
+          ) : (
+            <GoldenRule />
+          )}
+        </div>
+        <p className="display m-0 mt-3 mb-1.5 text-[16px]">THE SUSPECTS</p>
+        <SuspectList compact />
+      </div>
       <button
         type="button"
-        className="btn display mt-5 w-full rounded-xl bg-tomato py-2 text-[22px]"
+        className="btn display mt-3 w-full shrink-0 rounded-xl bg-tomato py-2 text-[22px]"
         onClick={onClose}
       >
         GOT IT
@@ -132,7 +150,7 @@ const Welcome = ({
         className="btn display w-full rounded-xl bg-tomato py-2.5 text-[22px]"
         onClick={onPractice}
       >
-        PRACTICE (30 SEC)
+        PRACTICE (1 MIN)
       </button>
       <button
         type="button"
@@ -275,6 +293,9 @@ const Game = ({
 
   const testimony = selected ? c.testimonies[indexOf(selected)] : undefined;
   const zone = testimony ? zoneFor(testimony.statement, c.suspects) : null;
+  const so = testimony
+    ? soLine(testimony.speaker, testimony.statement, c.suspects, c.liarMode)
+    : null;
 
   // Anyone the open clue names, or who stands where it says the farter was, looks nervous.
   const moods = useMemo(() => {
@@ -490,7 +511,11 @@ const Game = ({
           </p>
           <div className="w-full text-left">
             <p className="display m-0 mb-1.5 text-[15px]">HOW TO SOLVE IT</p>
-            <SolveSteps c={c} culprit={PRACTICE_CULPRIT} />
+            <SolveSteps
+              c={c}
+              culprit={PRACTICE_CULPRIT}
+              guessed={practiceLost}
+            />
           </div>
           <button
             type="button"
@@ -641,39 +666,83 @@ const Game = ({
               className="rise relative rounded-2xl border-[3px] border-ink bg-white px-3.5 pt-2.5 pb-3"
               aria-live="polite"
             >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[13px] font-bold tracking-wide text-ink-soft">
-                  {CAST[selected].name.toUpperCase()}’S CLUE
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5">
+                  <Suspect id={selected} className="h-9 w-auto" />
+                  <span className="text-[14px] leading-tight font-bold">
+                    {CAST[selected].name.toUpperCase()}
+                    <span className="block text-[11.5px] font-medium text-ink-soft">
+                      {CAST[selected].role}
+                    </span>
+                  </span>
                 </span>
                 <span className="text-[11.5px] font-bold text-ink-soft">
                   {read.size} OF {c.suspects.length} READ
                 </span>
               </div>
-              <p className="m-0 mt-1 text-[19px] leading-snug font-medium">
-                {meaningParts(testimony.plain).map((part, i) =>
-                  part.food ? (
-                    <strong
-                      key={i}
-                      className="rounded-md border-2 border-ink px-1"
-                      style={{ background: FOOD_COLORS[part.food] }}
-                    >
-                      {part.text}
-                    </strong>
-                  ) : part.strong ? (
-                    <strong key={i}>{part.text}</strong>
-                  ) : (
-                    <span key={i}>{part.text}</span>
-                  )
-                )}
+              <p className="relative m-0 mt-2 rounded-xl border-2 border-ink bg-paper px-2.5 py-1.5 text-[15px] leading-snug">
+                <span
+                  className="absolute -top-[9px] left-4 h-0 w-0 border-x-[7px] border-b-[9px] border-x-transparent border-b-ink"
+                  aria-hidden="true"
+                />
+                {testimony.quote}
+              </p>
+              <p className="m-0 mt-2.5 text-[11.5px] font-bold tracking-wide text-ink-soft">
+                THE CLUE IN PLAIN WORDS
+              </p>
+              <p className="m-0 text-[19px] leading-snug font-medium">
+                <Meaning text={testimony.plain} />
               </p>
               {c.liarMode && (
                 <p className="m-0 mt-1 text-[13px] font-bold text-tomato">
                   This could be the farter’s lie.
                 </p>
               )}
-              <p className="m-0 mt-2 rounded-md bg-paper px-2 py-1 text-[13px] leading-snug text-ink-soft italic">
-                {testimony.quote}
-              </p>
+              {so && so.text && (
+                <div className="mt-2 rounded-lg border-2 border-ink bg-sun/35 px-2.5 py-1.5">
+                  <p className="m-0 text-[15px] leading-snug">
+                    <strong>So: </strong>
+                    <Meaning text={so.text} />
+                  </p>
+                  {so.people.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {so.people.map((id) => (
+                        <span
+                          key={id}
+                          className="flex items-center gap-1 rounded-lg border-2 border-ink bg-white py-0.5 pr-1.5 pl-0.5"
+                        >
+                          <Suspect
+                            id={id}
+                            mood={
+                              so.tone === 'innocent' ? 'relieved' : 'nervous'
+                            }
+                            className="h-7 w-auto"
+                          />
+                          <span className="text-[12.5px] font-bold">
+                            {CAST[id].name}
+                          </span>
+                          <span
+                            className={`rounded px-1 text-[11px] font-black ${
+                              so.tone === 'innocent'
+                                ? 'bg-mint'
+                                : 'bg-tomato/30'
+                            }`}
+                          >
+                            {so.tone === 'innocent' ? '✓ INNOCENT' : '? MAYBE'}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {so.tone === 'suspect' && (
+                    <p className="m-0 mt-1 text-[13px] font-medium">
+                      {c.liarMode
+                        ? 'If so, everyone else is innocent.'
+                        : 'Everyone else is innocent.'}
+                    </p>
+                  )}
+                </div>
+              )}
               <button
                 type="button"
                 className="btn mt-2.5 w-full rounded-xl bg-white py-1.5 text-[15px] font-bold"
@@ -851,8 +920,8 @@ const Game = ({
 export const App = () => {
   const [data, setData] = useState<CaseResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [stage, setStage] = useState<'welcome' | 'practice' | 'real'>(() =>
-    hasSeenRules() ? 'real' : 'welcome'
+  const [stage, setStage] = useState<'welcome' | 'meet' | 'practice' | 'real'>(
+    () => (hasSeenRules() ? 'real' : 'welcome')
   );
   // Test mode only (private test subreddit): which day to load, and a counter to reload it.
   const [testDate, setTestDate] = useState<string | null>(null);
@@ -939,9 +1008,10 @@ export const App = () => {
   // any device) goes straight to the case or their result.
   const isNewPlayer = !data?.result && !data?.returning;
   if (stage === 'welcome' && (isNewPlayer || data?.testMode)) {
-    return (
-      <Welcome onPractice={() => setStage('practice')} onSkip={finishIntro} />
-    );
+    return <Welcome onPractice={() => setStage('meet')} onSkip={finishIntro} />;
+  }
+  if (stage === 'meet') {
+    return <MeetSuspects onStart={() => setStage('practice')} />;
   }
   if (stage === 'practice') {
     return (

@@ -1,9 +1,10 @@
-import type { PublicCase, SuspectId } from './types.ts';
+import type { PublicCase, Statement, SuspectId } from './types.ts';
 import { analyzeCase, possibleCulpritIndexes } from './solver.ts';
 import { must } from './rng.ts';
 
 export type ExplainStep = {
   speaker: SuspectId;
+  statement: Statement;
   plain: string;
   /** People this clue rules out, on top of the clues before it. Empty = "remember this". */
   ruledOut: SuspectId[];
@@ -66,6 +67,7 @@ export function explainSolution(
     const testimony = must(c.testimonies[pick], 'testimony');
     steps.push({
       speaker: testimony.speaker,
+      statement: testimony.statement,
       plain: testimony.plain,
       ruledOut: possible
         .filter((i) => !pickLeft.includes(i))

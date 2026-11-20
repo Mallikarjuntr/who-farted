@@ -4,8 +4,11 @@ export {
   FOODS,
   SUSPECT_IDS,
   FOOD_IDS,
-  ROW_WORDS,
-  COL_WORDS,
+  ROW_LABELS,
+  COL_LABELS,
+  atRow,
+  atCol,
+  atSlot,
 } from './cast.ts';
 export {
   LAUNCH_DATE,

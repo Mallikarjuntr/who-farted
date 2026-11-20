@@ -169,7 +169,11 @@ export const Result = ({
             </p>
             <section className="sticker w-full rounded-2xl bg-white px-3 py-2.5">
               <p className="display m-0 mb-1.5 text-[15px]">HOW TO SOLVE IT</p>
-              <SolveSteps c={c} culprit={result.culprit} />
+              <SolveSteps
+                c={c}
+                culprit={result.culprit}
+                guessed={result.guessed}
+              />
             </section>
           </>
         )}

@@ -5,7 +5,7 @@ import type {
   Statement,
   SuspectId,
 } from '../../shared/puzzle/types';
-import { CAST, COL_LABELS, FOODS, ROW_LABELS } from '../../shared/puzzle/cast';
+import { CAST, FOODS, atCol, atRow } from '../../shared/puzzle/cast';
 
 export const cellKey = (slot: Slot): string => `${slot.row}-${slot.col}`;
 
@@ -125,17 +125,13 @@ export function profileChips(statements: readonly Statement[]): string[] {
   for (const s of statements) {
     switch (s.kind) {
       case 'culpritRow':
-        chips.push(`${ROW_LABELS[s.row]} row`);
+        chips.push(atRow(s.row));
         break;
       case 'culpritCol':
-        chips.push(
-          s.col === 1 ? 'in the MIDDLE' : `on the ${COL_LABELS[s.col]}`
-        );
+        chips.push(atCol(s.col));
         break;
       case 'culpritNotCol':
-        chips.push(
-          s.col === 1 ? 'NOT in the MIDDLE' : `NOT on the ${COL_LABELS[s.col]}`
-        );
+        chips.push(`NOT ${atCol(s.col)}`);
         break;
       case 'culpritNextTo':
         chips.push(`NEXT TO ${name(s.other)}`);
@@ -182,7 +178,7 @@ const NAMES = new Set(Object.values(CAST).map((c) => c.name));
 
 /**
  * Splits a meaning line into words so the screen can make the key ones pop:
- * capital words (NOT, LEFT, BACK), names, and food tags (shown in food colours).
+ * capital words (NOT, MIRROR, BACK), names, and food tags (shown in food colours).
  */
 export function meaningParts(plain: string): MeaningPart[] {
   return plain.split(' ').flatMap((word, i, all): MeaningPart[] => {

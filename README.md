@@ -6,22 +6,26 @@ Built on [Devvit Web](https://developers.reddit.com/) for Reddit's Game of the D
 
 ## The suspects
 
-| Suspect | Who they are   | How they give clues                |
-| ------- | -------------- | ---------------------------------- |
-| Agnes   | Grandma        | Talks ("Mark my words.")           |
-| Brock   | Gym bro        | Talks ("Trust me, bro.")           |
-| Pip     | Toddler        | Points, giggles, hugs the innocent |
-| Biscuit | Dog            | Sniffs people and their lunches    |
-| Linda   | Office manager | Talks ("I am filing a report.")    |
-| Marcel  | Mime           | Acts it out without a word         |
+| Suspect | Who they are   | How they give clues                                    |
+| ------- | -------------- | ------------------------------------------------------ |
+| Agnes   | Grandma        | Talks. Says what she saw. Starts with "Oh dear!"       |
+| Brock   | Gym bro        | Talks. Calls everyone "bro".                           |
+| Pip     | Toddler        | Can't talk yet. Points at the smell, hugs the innocent |
+| Biscuit | Dog            | Can't talk. Sniffs people to find out what they ate    |
+| Linda   | Office manager | Talks. Writes everything down. Very exact.             |
+| Marcel  | Mime           | Never says a word. Acts out what he saw                |
+
+New players meet these six on a "Meet the suspects" screen before the practice case. The same list is in the **?** rules.
 
 ## How to play
 
-1. **Open today's case.** Tap the pinned "Who Farted? Case #…" post, then **START SNIFFING**. New players get a 30-second practice case first.
-2. **Tap a suspect to read their clue.** Each clue also shows in plain words, and the lift lights up the area it talks about. Clues use the words printed on the lift: **LEFT / MIDDLE / RIGHT** and **BACK / FRONT**. Food clues use the lunch stickers (CHILI, BEANS, EGGS…).
+1. **Open today's case.** Tap the pinned "Who Farted? Case #…" post, then **START SNIFFING**. New players meet the suspects, then play a 1-minute practice case.
+2. **Tap a suspect to read their clue.** The character says it in their own voice. Under it, the game shows **the clue in plain words** and a **"So:" line** with what it means, plus the faces of the people it clears or points at. The lift lights up the area it talks about.
+   - Places are named after things you can see in the lift: the **BUTTONS** panel, the **MIDDLE**, the **MIRROR**, the **BACK** wall and the **DOORS**. Never "left" or "right", because the suspects face you, so their right is your left.
+   - Food clues use the lunch stickers (CHILI, BEANS, EGGS…).
 3. **Mark the innocent.** When the clues prove someone did not do it, tap **✗ MARK INNOCENT**. These are only your notes. If the clues don't prove it yet, the suspect says "Prove it!"
 4. **Guess the farter.** Tap **GUESS THE FARTER**. You get **one** guess per case.
-5. **See the verdict.** Find out if you were right, read the confession, and see who the whole subreddit blamed. A wrong guess shows **how to solve it**, step by step.
+5. **See the verdict.** Find out if you were right, read the confession, and see who the whole subreddit blamed. A wrong guess shows **how to solve it**, step by step in plain words, and **why your pick was not the farter**.
 6. **Share it.** **POST MY VERDICT** adds a spoiler-free comment with your time and streak.
 
 ### The week

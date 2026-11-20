@@ -14,6 +14,7 @@ import {
   toPublicCase,
 } from '../shared/puzzle/generator.ts';
 import { TEASERS } from '../shared/puzzle/wording.ts';
+import { soLine } from '../shared/puzzle/meaning.ts';
 import {
   analyzeCase,
   isProvenInnocent,
@@ -199,6 +200,40 @@ void test('clue lines stay short and tidy', () => {
         !/ {2}|\.\.(?!\.)|\bthe the\b/i.test(t.quote),
         `untidy: ${t.quote}`
       );
+    }
+  }
+});
+
+void test('clues never say left or right, and use no idioms', () => {
+  const banned =
+    /\b(left|right side|on the right|to the right|front row|no cap|per my last|leg day|fresh as a daisy|mark my words|bet my|dead centre)\b/i;
+  for (const c of cases) {
+    for (const t of c.testimonies) {
+      assert.ok(!banned.test(t.plain), `plain in ${c.id}: ${t.plain}`);
+      assert.ok(!banned.test(t.quote), `quote in ${c.id}: ${t.quote}`);
+    }
+  }
+});
+
+void test('every clue has a "So:" line, and place clues name the right people', () => {
+  for (const c of cases) {
+    const truthful = !c.liarMode;
+    for (const t of c.testimonies) {
+      const so = soLine(t.speaker, t.statement, c.suspects, c.liarMode);
+      assert.ok(so.text.length > 10, `empty So line in ${c.id}`);
+      assert.ok(!/undefined|NaN/.test(so.text), so.text);
+      if (truthful && so.tone === 'suspect') {
+        assert.ok(
+          so.people.includes(c.solution.culprit),
+          `${c.id}: So line drops the culprit`
+        );
+      }
+      if (truthful && so.tone === 'innocent') {
+        assert.ok(
+          !so.people.includes(c.solution.culprit),
+          `${c.id}: So line clears the culprit`
+        );
+      }
     }
   }
 });

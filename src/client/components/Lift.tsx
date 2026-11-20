@@ -1,5 +1,5 @@
 import type { PlacedSuspect, SuspectId } from '../../shared/puzzle/types';
-import { CAST, COL_LABELS, ROW_LABELS } from '../../shared/puzzle/cast';
+import { CAST, COL_LABELS, ROW_LABELS, atSlot } from '../../shared/puzzle/cast';
 import type { LunchTag, Zone } from '../lib/clues';
 import { FOOD_COLORS, cellKey } from '../lib/clues';
 import type { Mood } from './Suspect';
@@ -48,9 +48,56 @@ const Cross = () => (
   </svg>
 );
 
+/** The button panel on one wall of the lift. */
+const ButtonsIcon = () => (
+  <svg viewBox="0 0 12 16" className="h-[14px] w-auto" aria-hidden="true">
+    <rect
+      x="1"
+      y="1"
+      width="10"
+      height="14"
+      rx="2"
+      fill="#C9CED6"
+      stroke="#141414"
+      strokeWidth="1.6"
+    />
+    <circle cx="6" cy="5.2" r="1.9" fill="#FFC93C" stroke="#141414" />
+    <circle cx="6" cy="10.8" r="1.9" fill="#FFC93C" stroke="#141414" />
+  </svg>
+);
+
+/** The mirror on the other wall. */
+const MirrorIcon = () => (
+  <svg viewBox="0 0 12 16" className="h-[14px] w-auto" aria-hidden="true">
+    <rect
+      x="1"
+      y="1"
+      width="10"
+      height="14"
+      rx="2"
+      fill="#BFE6FF"
+      stroke="#141414"
+      strokeWidth="1.6"
+    />
+    <path
+      d="M3.5 7 L7 3.5 M4 11 L9 6"
+      stroke="#fff"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const COL_STYLE = [
+  'bg-[#E4E7EC]',
+  'bg-white/70',
+  'bg-[linear-gradient(135deg,#DDF2FF,#BFE6FF)]',
+];
+
 /**
- * The lift seen from the front. Every column and row carries the exact word the
- * clues use (LEFT, MIDDLE, RIGHT, BACK, FRONT), so nobody has to picture it.
+ * The lift seen from the front. Places are named after things you can see
+ * (the BUTTONS panel, the MIRROR, the DOORS) instead of left and right,
+ * which flip depending on who is looking. Clues use exactly these words.
  */
 export const Lift = ({
   suspects,
@@ -71,9 +118,11 @@ export const Lift = ({
       {COLS.map((col) => (
         <span
           key={`h${col}`}
-          className="display rounded-md bg-white/70 text-center text-[13px] leading-[20px] text-lift-ink"
+          className={`display flex items-center justify-center gap-1 rounded-md text-center text-[13px] leading-[20px] text-lift-ink ${COL_STYLE[col] ?? ''}`}
         >
+          {col === 0 && <ButtonsIcon />}
           {COL_LABELS[col]}
+          {col === 2 && <MirrorIcon />}
         </span>
       ))}
 
@@ -113,7 +162,7 @@ export const Lift = ({
                 type="button"
                 onClick={() => onSelect(s.id)}
                 aria-pressed={isSelected}
-                aria-label={`${CAST[s.id].name}, ${ROW_LABELS[row]} ${COL_LABELS[col]}${isCrossed ? ', marked innocent' : ''}${isRead ? '' : ', clue not read yet'}`}
+                aria-label={`${CAST[s.id].name}, ${atSlot(s.slot)}${isCrossed ? ', marked innocent' : ''}${isRead ? '' : ', clue not read yet'}`}
                 className={`tap relative flex flex-col items-center rounded-xl border-0 p-0.5 pb-1 ${zoneClass} ${
                   isSelected ? 'bg-sun/70' : 'bg-transparent'
                 } ${pulse === s.id ? 'coach-pulse' : ''}`}

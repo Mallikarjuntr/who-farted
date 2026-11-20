@@ -16,7 +16,7 @@ const BISCUIT_CLUE: Statement = {
 
 /**
  * A tiny hand-made case for first-time players: four people, two useful clues.
- * Agnes says the farter was on the RIGHT, Pip says Agnes is not the farter,
+ * Agnes says the farter stood by the MIRROR, Pip says Agnes is not the farter,
  * so it must be Biscuit.
  */
 export const PRACTICE_CASE: PublicCase = {
@@ -37,25 +37,25 @@ export const PRACTICE_CASE: PublicCase = {
     {
       speaker: 'pip',
       statement: PIP_CLUE,
-      quote: 'Pip hugs Agnes’s leg. Pip never hugs a farter.',
+      quote: 'Pip hugs Agnes. Pip only hugs people who did NOT fart.',
       plain: plainText(PIP_CLUE),
     },
     {
       speaker: 'agnes',
       statement: AGNES_CLUE,
-      quote: 'Oh, dear. The smell came from the right side.',
+      quote: 'Oh dear! The smell came from the MIRROR.',
       plain: plainText(AGNES_CLUE),
     },
     {
       speaker: 'brock',
       statement: BROCK_CLUE,
-      quote: 'Bro. Pip had chili for lunch. Little dude loves chili.',
+      quote: 'Bro! I saw Pip eat chili for lunch.',
       plain: plainText(BROCK_CLUE),
     },
     {
       speaker: 'biscuit',
       statement: BISCUIT_CLUE,
-      quote: 'Biscuit sniffs Brock and loses interest. No eggs there.',
+      quote: 'Biscuit sniffs Brock and walks away. No eggs smell.',
       plain: plainText(BISCUIT_CLUE),
     },
   ],
@@ -71,17 +71,17 @@ export function coachStep(
   crossed: ReadonlySet<SuspectId>
 ): CoachStep {
   if (!read.has('agnes')) {
-    return { text: 'Tap AGNES. She has a clue.', target: 'agnes' };
+    return { text: 'Tap AGNES to hear her clue.', target: 'agnes' };
   }
   if (!crossed.has('pip')) {
     return {
-      text: 'Agnes says the farter was on the RIGHT. Pip is on the LEFT, so Pip is NOT the farter. Tap PIP, then tap MARK INNOCENT.',
+      text: 'Agnes says the farter stood by the MIRROR. Pip stands by the BUTTONS, so Pip is innocent. Tap PIP, then tap MARK INNOCENT.',
       target: 'pip',
     };
   }
   if (!crossed.has('brock')) {
     return {
-      text: 'Brock is on the LEFT too. Tap BROCK, then tap MARK INNOCENT.',
+      text: 'Brock stands by the BUTTONS too, so he is innocent. Tap BROCK, then tap MARK INNOCENT.',
       target: 'brock',
     };
   }
@@ -90,12 +90,12 @@ export function coachStep(
   }
   if (!crossed.has('agnes')) {
     return {
-      text: 'Pip’s clue says AGNES is NOT the farter. Tap AGNES, then tap MARK INNOCENT.',
+      text: 'Pip hugged AGNES, so Agnes is innocent. Tap AGNES, then tap MARK INNOCENT.',
       target: 'agnes',
     };
   }
   return {
-    text: 'Only BISCUIT is left. Tap GUESS THE FARTER and pick Biscuit.',
+    text: 'Only BISCUIT is left, so Biscuit did it! Tap GUESS THE FARTER and pick Biscuit.',
     target: null,
   };
 }
