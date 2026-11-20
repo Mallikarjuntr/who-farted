@@ -12,7 +12,7 @@ export type DailyPostOutcome =
 /**
  * Posts the case for `date` once. Safe to call again (from the midnight job,
  * the install trigger or the mod menu): a second call returns the first post.
- * The newest case is pinned and yesterday's is unpinned.
+ * The newest case is pinned in the second highlight slot and yesterday's is unpinned.
  */
 export async function postDailyCase(
   date: string = todayUtc()
@@ -47,8 +47,10 @@ async function pinNewest(postId: string, date: string): Promise<void> {
     if (isPostId(previous)) {
       await (await reddit.getPostById(previous)).unsticky();
     }
+    // The bottom highlight slot, so the moderators' own pin (the how-to-play
+    // post) keeps the top slot and is never pushed out.
     if (isPostId(postId)) {
-      await (await reddit.getPostById(postId)).sticky(1);
+      await (await reddit.getPostById(postId)).sticky(2);
     }
   } catch (error) {
     // Pinning is nice to have; the case post itself is what matters.
