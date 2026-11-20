@@ -41,6 +41,8 @@ export type CaseResponse = {
   testMode: boolean;
   /** True once this player has posted their verdict comment on this case. */
   commented: boolean;
+  /** The subreddit the game is played in, for the join button. */
+  subredditName: string | null;
 };
 
 export type AccuseRequest = {
@@ -57,5 +59,7 @@ export type AccuseResponse = { type: 'accuse'; result: AccuseResult };
 export type CommentResponse = { type: 'comment'; alreadyPosted: boolean };
 
 export type ResetResponse = { type: 'reset' };
+
+export type JoinResponse = { type: 'join' };
 
 export type ErrorResponse = { type: 'error'; message: string };

@@ -21,13 +21,29 @@ const DENIALS = [
 ];
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const MONTHS = [
+  'JAN',
+  'FEB',
+  'MAR',
+  'APR',
+  'MAY',
+  'JUN',
+  'JUL',
+  'AUG',
+  'SEP',
+  'OCT',
+  'NOV',
+  'DEC',
+];
 
-/** "MON · EASY", "WED · MEDIUM", "SAT · SOMEONE LIES". */
+/** "MON 23 NOV · EASY", "WED 25 NOV · MEDIUM", "SAT 28 NOV · SOMEONE LIES". */
 function dayLabel(date: string, difficulty: string): string {
-  const day = DAYS[new Date(`${date}T00:00:00Z`).getUTCDay()] ?? '';
+  const d = new Date(`${date}T00:00:00Z`);
+  const day = DAYS[d.getUTCDay()] ?? '';
+  const month = MONTHS[d.getUTCMonth()] ?? '';
   const level =
     difficulty === 'hard' ? 'SOMEONE LIES' : difficulty.toUpperCase();
-  return `${day} · ${level}`;
+  return `${day} ${d.getUTCDate()} ${month} · ${level}`;
 }
 
 export const Splash = () => {

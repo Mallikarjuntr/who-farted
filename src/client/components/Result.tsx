@@ -7,8 +7,8 @@ import { FOOD_COLORS, confession } from '../lib/clues';
 import { badgeFor, nextBadge } from '../../shared/badges';
 import { verdictFor } from '../../shared/verdict';
 import { trackAction } from '../lib/analytics';
-import { postComment } from '../lib/api';
-import { formatTime, untilNextCase } from '../lib/util';
+import { postComment, postJoin } from '../lib/api';
+import { formatTime, hasJoined, markJoined, untilNextCase } from '../lib/util';
 import { Burst } from './Burst';
 import { SolveSteps } from './SolveSteps';
 import { Suspect } from './Suspect';
@@ -19,6 +19,8 @@ type Props = {
   commented: boolean;
   /** True while the server is still confirming: the reveal shows, the numbers follow. */
   pending?: boolean;
+  /** Where the game is played; shows a join button when known. */
+  subredditName?: string | null;
 };
 
 function burstPath(): string {
@@ -36,12 +38,37 @@ function burstPath(): string {
 
 const BURST = burstPath();
 
-export const Result = ({ c, result, commented, pending = false }: Props) => {
+export const Result = ({
+  c,
+  result,
+  commented,
+  pending = false,
+  subredditName = null,
+}: Props) => {
   const badge = badgeFor(result.streak?.current ?? 0);
   const next = nextBadge(result.streak?.current ?? 0);
   const [comment, setComment] = useState<'idle' | 'posting' | 'posted'>(
     commented ? 'posted' : 'idle'
   );
+
+  const [join, setJoin] = useState<'idle' | 'joining' | 'joined'>(() =>
+    hasJoined() ? 'joined' : 'idle'
+  );
+  const joinSub = async () => {
+    setJoin('joining');
+    try {
+      await postJoin();
+      markJoined();
+      setJoin('joined');
+      trackAction('join_subreddit');
+      showToast(`Joined! Tomorrow's case will be in your feed.`);
+    } catch (err) {
+      setJoin('idle');
+      showToast(
+        err instanceof Error ? err.message : 'Could not join right now.'
+      );
+    }
+  };
 
   const postVerdict = async () => {
     setComment('posting');
@@ -318,6 +345,21 @@ export const Result = ({ c, result, commented, pending = false }: Props) => {
             Copy instead
           </button>
         </p>
+        {subredditName && join !== 'joined' && (
+          <div className="flex w-full flex-col items-center gap-1">
+            <button
+              type="button"
+              className="btn w-full rounded-xl bg-mint py-2.5 text-[17px] font-extrabold"
+              disabled={join === 'joining'}
+              onClick={() => void joinSub()}
+            >
+              {join === 'joining' ? 'Joining…' : `+ Join r/${subredditName}`}
+            </button>
+            <p className="m-0 text-center text-[12.5px] text-ink-soft">
+              Tomorrow’s case lands in your feed.
+            </p>
+          </div>
+        )}
         <p className="m-0 text-[12.5px] font-medium">
           Next elevator in {untilNextCase()}
         </p>

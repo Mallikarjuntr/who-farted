@@ -4,6 +4,7 @@ import type {
   CaseResponse,
   CommentResponse,
   ErrorResponse,
+  JoinResponse,
   ResetResponse,
 } from '../../shared/api';
 
@@ -62,6 +63,16 @@ export async function postComment(date: string): Promise<CommentResponse> {
     body: JSON.stringify({ date }),
   });
   const data: CommentResponse | ErrorResponse = await res.json();
+  if (!res.ok || isError(data)) {
+    throw new Error(isError(data) ? data.message : `HTTP ${res.status}`);
+  }
+  return data;
+}
+
+/** Joins the subreddit. Only called from the explicit button. */
+export async function postJoin(): Promise<JoinResponse> {
+  const res = await fetch('/api/join', { method: 'POST' });
+  const data: JoinResponse | ErrorResponse = await res.json();
   if (!res.ok || isError(data)) {
     throw new Error(isError(data) ? data.message : `HTTP ${res.status}`);
   }

@@ -153,6 +153,8 @@ type GameProps = {
   onPracticeRetry?: () => void;
   /** Whether the player already posted their verdict comment on this case. */
   commented?: boolean;
+  /** Where the game is played, for the join button on the result screen. */
+  subredditName?: string | null;
 };
 
 const Game = ({
@@ -162,6 +164,7 @@ const Game = ({
   onPracticeDone,
   onPracticeRetry,
   commented = false,
+  subredditName = null,
 }: GameProps) => {
   const analysis = useMemo(() => analyzeCase(c), [c]);
   const indexOf = useCallback(
@@ -466,7 +469,13 @@ const Game = ({
 
   if (result) {
     return (
-      <Result c={c} result={result} commented={commented} pending={pending} />
+      <Result
+        c={c}
+        result={result}
+        commented={commented}
+        pending={pending}
+        subredditName={subredditName}
+      />
     );
   }
 
@@ -953,6 +962,7 @@ export const App = () => {
         c={data.case}
         initialResult={data.result}
         commented={data.commented}
+        subredditName={data.subredditName}
       />
     </>
   );

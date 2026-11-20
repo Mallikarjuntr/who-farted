@@ -42,7 +42,8 @@ export type GameAction =
   | 'hint'
   | 'open_rules'
   | 'open_guess'
-  | 'post_verdict';
+  | 'post_verdict'
+  | 'join_subreddit';
 
 export function trackAction(action: GameAction): void {
   quietly(() => telemetry.interaction({ action }));

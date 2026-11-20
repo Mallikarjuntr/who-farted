@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
-import { context } from '@devvit/web/server';
+import { context, reddit } from '@devvit/web/server';
 import type {
   AccuseResponse,
   CaseResponse,
   CommentResponse,
   ErrorResponse,
+  JoinResponse,
   ResetResponse,
 } from '../../shared/api.ts';
 import { toPublicCase } from '../../shared/puzzle/generator.ts';
@@ -45,6 +46,7 @@ api.get('/case', async (c) => {
       playersSoFar: blame.total,
       testMode: await isTestMode(),
       commented,
+      subredditName: context.subredditName ?? null,
     });
   } catch (error) {
     console.error('GET /api/case failed', error);
@@ -141,6 +143,26 @@ api.post('/comment', async (c) => {
     console.error('POST /api/comment failed', error);
     return c.json<ErrorResponse>(
       { type: 'error', message: 'Could not post the comment.' },
+      500
+    );
+  }
+});
+
+/** Joins the subreddit for the player. Only called from the explicit button. */
+api.post('/join', async (c) => {
+  if (!context.userId) {
+    return c.json<ErrorResponse>(
+      { type: 'error', message: 'Log in to Reddit to join.' },
+      401
+    );
+  }
+  try {
+    await reddit.subscribeToCurrentSubreddit();
+    return c.json<JoinResponse>({ type: 'join' });
+  } catch (error) {
+    console.error('POST /api/join failed', error);
+    return c.json<ErrorResponse>(
+      { type: 'error', message: 'Could not join right now.' },
       500
     );
   }

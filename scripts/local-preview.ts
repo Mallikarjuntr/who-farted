@@ -54,6 +54,7 @@ createServer(async (req, res) => {
       playersSoFar: 0,
       testMode: !newPlayer,
       commented: false,
+      subredditName: 'WhoFartedDaily',
     };
     res
       .writeHead(200, { 'Content-Type': 'application/json' })
@@ -87,6 +88,12 @@ createServer(async (req, res) => {
     res
       .writeHead(200, { 'Content-Type': 'application/json' })
       .end(JSON.stringify({ type: 'accuse', result }));
+    return;
+  }
+  if (url.pathname === '/api/join' && req.method === 'POST') {
+    res
+      .writeHead(200, { 'Content-Type': 'application/json' })
+      .end(JSON.stringify({ type: 'join' }));
     return;
   }
   if (url.pathname === '/api/comment' && req.method === 'POST') {

@@ -19,6 +19,7 @@ export function untilNextCase(now: Date = new Date()): string {
 
 const OPEN_KEY = 'wf_open_suspect';
 const RULES_KEY = 'wf_seen_rules';
+const JOINED_KEY = 'wf_joined';
 
 function safeStorage(): Storage | null {
   try {
@@ -67,6 +68,23 @@ export function markRulesSeen(): void {
 export function clearRulesSeen(): void {
   try {
     safeStorage()?.removeItem(RULES_KEY);
+  } catch {
+    // Not critical.
+  }
+}
+
+/** Remembers on this device that the player joined, so the button stays away. */
+export function hasJoined(): boolean {
+  try {
+    return safeStorage()?.getItem(JOINED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function markJoined(): void {
+  try {
+    safeStorage()?.setItem(JOINED_KEY, '1');
   } catch {
     // Not critical.
   }
