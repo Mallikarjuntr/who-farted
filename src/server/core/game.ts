@@ -332,10 +332,20 @@ export async function hasCommented(
   return Boolean(await redis.hGet(keys.commented(date), userId));
 }
 
-/** The spoiler-free verdict a player can post under the case. */
-export function verdictText(c: CaseFile, result: AccuseResult): string {
+/**
+ * The spoiler-free verdict a player can post under the case. `player` names
+ * them when the comment ends up under the app's name instead of theirs.
+ */
+export function verdictText(
+  c: CaseFile,
+  result: AccuseResult,
+  player?: string
+): string {
   const v = verdictFor(c.number, c.suspects.length, result);
-  return [`**${v.title}**`, v.line, `*${v.footer}*`].join('\n\n');
+  const title = player
+    ? `**${v.title}** · verdict from u/${player}`
+    : `**${v.title}**`;
+  return [title, v.line, `*${v.footer}*`].join('\n\n');
 }
 
 export type CommentOutcome = 'posted' | 'already' | 'not-played' | 'no-user';
@@ -360,12 +370,26 @@ export async function postVerdictComment(
     return 'already';
   }
   try {
+    const c = getCase(date);
     const comment = await reddit.submitComment({
       id: postId,
-      text: verdictText(getCase(date), result),
+      text: verdictText(c, result),
       runAs: 'USER',
     });
     await redis.hSet(keys.commented(date), { [userId]: comment.id });
+    // Until the app is approved, Reddit posts other players' comments under
+    // the app's name. Then the comment says whose verdict it is.
+    const { username } = context;
+    if (
+      username &&
+      comment.authorName.toLowerCase() !== username.toLowerCase()
+    ) {
+      try {
+        await comment.edit({ text: verdictText(c, result, username) });
+      } catch (error) {
+        console.error('Could not add the player name to the verdict', error);
+      }
+    }
     return 'posted';
   } catch (error) {
     await redis.hDel(keys.commented(date), [userId]);
