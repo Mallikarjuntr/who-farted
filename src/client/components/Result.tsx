@@ -1,4 +1,4 @@
-import { showToast } from '@devvit/web/client';
+import { navigateTo, showToast } from '@devvit/web/client';
 import { useMemo, useState } from 'react';
 import type { AccuseResult } from '../../shared/api';
 import type { PublicCase } from '../../shared/puzzle/types';
@@ -62,10 +62,14 @@ export const Result = ({
       setJoin('joined');
       trackAction('join_subreddit');
       showToast(`Joined! Tomorrow's case will be in your feed.`);
-    } catch (err) {
+    } catch {
+      // Reddit only lets an app join a sub for the player after the app is
+      // reviewed. Until then, open the sub so they can tap Reddit's own Join.
       setJoin('idle');
-      showToast(
-        err instanceof Error ? err.message : 'Could not join right now.'
+      trackAction('join_subreddit');
+      showToast('Tap JOIN at the top of the page.');
+      navigateTo(
+        `https://www.reddit.com/r/${subredditName ?? 'WhoFartedDaily'}/`
       );
     }
   };
