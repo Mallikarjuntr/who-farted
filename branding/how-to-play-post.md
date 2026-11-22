@@ -25,7 +25,7 @@ New here? The game shows you the six suspects, then a 1-minute practice case.
 
 No left or right! Places are named after things in the lift: the **BUTTONS** panel, the **MIDDLE**, the **MIRROR**, the **BACK** wall and the **DOORS**. Food clues use the lunch stickers: CHILI, BEANS, EGGS…
 
-Every clue also shows **in plain words**, with a **"So:"** line that tells you what it means.
+Every clue is one short fact in plain words. Working out what it means is up to you!
 
 ### Days of the week
 

@@ -294,12 +294,13 @@ export async function yesterdaySummary(
   date: string
 ): Promise<YesterdaySummary | null> {
   const previous = shiftDate(date, -1);
-  const c = getCase(previous);
   const blame = await readBlame(previous);
   const top = blame.rows[0];
   if (!top || blame.total === 0) {
     return null;
   }
+  // Only build yesterday's case when someone played it (it costs a little time).
+  const c = getCase(previous);
   const correct =
     blame.rows.find((r) => r.id === c.solution.culprit)?.count ?? 0;
   return {

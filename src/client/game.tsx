@@ -17,7 +17,7 @@ import {
   isProvenInnocent,
   possibleCulprits,
 } from '../shared/puzzle/solver';
-import { soLine } from '../shared/puzzle/meaning';
+import { catchphrase } from '../shared/puzzle/wording';
 import { Lift } from './components/Lift';
 import {
   GoldenRule,
@@ -54,6 +54,7 @@ import {
   hasSeenRules,
   markRulesSeen,
   shiftDay,
+  takeHandedOffCase,
   takeOpenSuspect,
 } from './lib/util';
 
@@ -293,9 +294,6 @@ const Game = ({
 
   const testimony = selected ? c.testimonies[indexOf(selected)] : undefined;
   const zone = testimony ? zoneFor(testimony.statement, c.suspects) : null;
-  const so = testimony
-    ? soLine(testimony.speaker, testimony.statement, c.suspects, c.liarMode)
-    : null;
 
   // Anyone the open clue names, or who stands where it says the farter was, looks nervous.
   const moods = useMemo(() => {
@@ -668,80 +666,34 @@ const Game = ({
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5">
-                  <Suspect id={selected} className="h-9 w-auto" />
-                  <span className="text-[14px] leading-tight font-bold">
-                    {CAST[selected].name.toUpperCase()}
-                    <span className="block text-[11.5px] font-medium text-ink-soft">
-                      {CAST[selected].role}
-                    </span>
+                  <Suspect id={selected} className="h-8 w-auto" />
+                  <span className="text-[14px] font-bold">
+                    {CAST[selected].name.toUpperCase()} SAYS
                   </span>
                 </span>
                 <span className="text-[11.5px] font-bold text-ink-soft">
                   {read.size} OF {c.suspects.length} READ
                 </span>
               </div>
-              <p className="relative m-0 mt-2 rounded-xl border-2 border-ink bg-paper px-2.5 py-1.5 text-[15px] leading-snug">
+              <p className="relative m-0 mt-2 rounded-xl border-2 border-ink bg-paper px-2.5 py-1.5 text-[19px] leading-snug font-medium">
                 <span
-                  className="absolute -top-[9px] left-4 h-0 w-0 border-x-[7px] border-b-[9px] border-x-transparent border-b-ink"
+                  className="absolute -top-[9px] left-3 h-0 w-0 border-x-[7px] border-b-[9px] border-x-transparent border-b-ink"
                   aria-hidden="true"
                 />
-                {testimony.quote}
-              </p>
-              <p className="m-0 mt-2.5 text-[11.5px] font-bold tracking-wide text-ink-soft">
-                THE CLUE IN PLAIN WORDS
-              </p>
-              <p className="m-0 text-[19px] leading-snug font-medium">
+                {catchphrase(selected) && (
+                  <span className="font-bold">{catchphrase(selected)} </span>
+                )}
                 <Meaning text={testimony.plain} />
               </p>
-              {c.liarMode && (
-                <p className="m-0 mt-1 text-[13px] font-bold text-tomato">
-                  This could be the farter’s lie.
+              {CAST[selected].voice !== 'verbal' && (
+                <p className="m-0 mt-1.5 text-[13px] leading-snug text-ink-soft italic">
+                  {testimony.quote}
                 </p>
               )}
-              {so && so.text && (
-                <div className="mt-2 rounded-lg border-2 border-ink bg-sun/35 px-2.5 py-1.5">
-                  <p className="m-0 text-[15px] leading-snug">
-                    <strong>So: </strong>
-                    <Meaning text={so.text} />
-                  </p>
-                  {so.people.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      {so.people.map((id) => (
-                        <span
-                          key={id}
-                          className="flex items-center gap-1 rounded-lg border-2 border-ink bg-white py-0.5 pr-1.5 pl-0.5"
-                        >
-                          <Suspect
-                            id={id}
-                            mood={
-                              so.tone === 'innocent' ? 'relieved' : 'nervous'
-                            }
-                            className="h-7 w-auto"
-                          />
-                          <span className="text-[12.5px] font-bold">
-                            {CAST[id].name}
-                          </span>
-                          <span
-                            className={`rounded px-1 text-[11px] font-black ${
-                              so.tone === 'innocent'
-                                ? 'bg-mint'
-                                : 'bg-tomato/30'
-                            }`}
-                          >
-                            {so.tone === 'innocent' ? '✓ INNOCENT' : '? MAYBE'}
-                          </span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {so.tone === 'suspect' && (
-                    <p className="m-0 mt-1 text-[13px] font-medium">
-                      {c.liarMode
-                        ? 'If so, everyone else is innocent.'
-                        : 'Everyone else is innocent.'}
-                    </p>
-                  )}
-                </div>
+              {c.liarMode && (
+                <p className="m-0 mt-1 text-[13px] font-bold text-tomato">
+                  Could be the farter’s lie.
+                </p>
               )}
               <button
                 type="button"
@@ -917,8 +869,12 @@ const Game = ({
   );
 };
 
+// Read once when the page loads: the case the feed card already fetched, so
+// the game draws at once. The server's fresh copy replaces it a moment later.
+const HANDED_OFF = takeHandedOffCase();
+
 export const App = () => {
-  const [data, setData] = useState<CaseResponse | null>(null);
+  const [data, setData] = useState<CaseResponse | null>(HANDED_OFF);
   const [error, setError] = useState<string | null>(null);
   const [stage, setStage] = useState<'welcome' | 'meet' | 'practice' | 'real'>(
     () => (hasSeenRules() ? 'real' : 'welcome')
@@ -1039,7 +995,7 @@ export const App = () => {
     <>
       {testBar}
       <Game
-        key={`real-${data.case.id}-${reloadKey}`}
+        key={`real-${data.case.id}-${reloadKey}-${data.result ? 'done' : 'open'}`}
         c={data.case}
         initialResult={data.result}
         commented={data.commented}

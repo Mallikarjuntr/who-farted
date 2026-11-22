@@ -20,7 +20,7 @@ New players meet these six on a "Meet the suspects" screen before the practice c
 ## How to play
 
 1. **Open today's case.** Tap the pinned "Who Farted? Case #…" post, then **START SNIFFING**. New players meet the suspects, then play a 1-minute practice case.
-2. **Tap a suspect to read their clue.** The character says it in their own voice. Under it, the game shows **the clue in plain words** and a **"So:" line** with what it means, plus the faces of the people it clears or points at. The lift lights up the area it talks about.
+2. **Tap a suspect to read their clue.** Each clue is one short fact in plain words, like "Bro! The farter ate BEANS." Pip, Biscuit and Marcel can't talk, so they also act it out in one line. The lift lights up the area the clue talks about. Working out what it means is the puzzle.
    - Places are named after things you can see in the lift: the **BUTTONS** panel, the **MIDDLE**, the **MIRROR**, the **BACK** wall and the **DOORS**. Never "left" or "right", because the suspects face you, so their right is your left.
    - Food clues use the lunch stickers (CHILI, BEANS, EGGS…).
 3. **Mark the innocent.** When the clues prove someone did not do it, tap **✗ MARK INNOCENT**. These are only your notes. If the clues don't prove it yet, the suspect says "Prove it!"

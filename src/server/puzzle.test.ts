@@ -14,7 +14,6 @@ import {
   toPublicCase,
 } from '../shared/puzzle/generator.ts';
 import { TEASERS } from '../shared/puzzle/wording.ts';
-import { soLine } from '../shared/puzzle/meaning.ts';
 import {
   analyzeCase,
   isProvenInnocent,
@@ -195,7 +194,7 @@ void test('title teasers use every line before any repeats, and never two days r
 void test('clue lines stay short and tidy', () => {
   for (const c of cases) {
     for (const t of c.testimonies) {
-      assert.ok(t.quote.length <= 120, `too long in ${c.id}: ${t.quote}`);
+      assert.ok(t.quote.length <= 70, `too long in ${c.id}: ${t.quote}`);
       assert.ok(
         !/ {2}|\.\.(?!\.)|\bthe the\b/i.test(t.quote),
         `untidy: ${t.quote}`
@@ -211,29 +210,6 @@ void test('clues never say left or right, and use no idioms', () => {
     for (const t of c.testimonies) {
       assert.ok(!banned.test(t.plain), `plain in ${c.id}: ${t.plain}`);
       assert.ok(!banned.test(t.quote), `quote in ${c.id}: ${t.quote}`);
-    }
-  }
-});
-
-void test('every clue has a "So:" line, and place clues name the right people', () => {
-  for (const c of cases) {
-    const truthful = !c.liarMode;
-    for (const t of c.testimonies) {
-      const so = soLine(t.speaker, t.statement, c.suspects, c.liarMode);
-      assert.ok(so.text.length > 10, `empty So line in ${c.id}`);
-      assert.ok(!/undefined|NaN/.test(so.text), so.text);
-      if (truthful && so.tone === 'suspect') {
-        assert.ok(
-          so.people.includes(c.solution.culprit),
-          `${c.id}: So line drops the culprit`
-        );
-      }
-      if (truthful && so.tone === 'innocent') {
-        assert.ok(
-          !so.people.includes(c.solution.culprit),
-          `${c.id}: So line clears the culprit`
-        );
-      }
     }
   }
 });

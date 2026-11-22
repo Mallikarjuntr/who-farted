@@ -37,7 +37,7 @@ function whyNot(
   const n = index + 1;
   const by = CAST[step.speaker].name;
   if (isPlaceClue(step.statement)) {
-    return `${stoodAt(c.suspects, guessed)} That does not fit what ${by} said in step ${n}.`;
+    return `${stoodAt(c.suspects, guessed)} That does not fit step ${n}.`;
   }
   if (step.statement.kind === 'innocent' && step.statement.who === guessed) {
     return `In step ${n}, ${by} said ${who} is NOT the farter.`;

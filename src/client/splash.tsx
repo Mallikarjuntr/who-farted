@@ -9,7 +9,12 @@ import type { SuspectId } from '../shared/puzzle/types';
 import { CAST } from '../shared/puzzle/cast';
 import { Suspect } from './components/Suspect';
 import { fetchCase } from './lib/api';
-import { formatTime, rememberOpenSuspect, untilNextCase } from './lib/util';
+import {
+  formatTime,
+  handOffCase,
+  rememberOpenSuspect,
+  untilNextCase,
+} from './lib/util';
 
 const SLOTS = [0, 1, 2, 3, 4, 5];
 
@@ -62,6 +67,9 @@ export const Splash = () => {
   const open = (event: MouseEvent, suspect?: SuspectId) => {
     if (suspect) {
       rememberOpenSuspect(suspect);
+    }
+    if (data) {
+      handOffCase(data);
     }
     requestExpandedMode(event.nativeEvent, 'game');
   };
