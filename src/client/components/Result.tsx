@@ -1,5 +1,5 @@
 import { navigateTo, showToast } from '@devvit/web/client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AccuseResult } from '../../shared/api';
 import type { PublicCase } from '../../shared/puzzle/types';
 import { CAST, FOODS } from '../../shared/puzzle/cast';
@@ -7,7 +7,7 @@ import { FOOD_COLORS, confession } from '../lib/clues';
 import { badgeFor, nextBadge } from '../../shared/badges';
 import { verdictFor } from '../../shared/verdict';
 import { trackAction } from '../lib/analytics';
-import { postComment, postJoin } from '../lib/api';
+import { fetchAvatar, postComment, postJoin } from '../lib/api';
 import { formatTime, hasJoined, markJoined, untilNextCase } from '../lib/util';
 import { Burst } from './Burst';
 import { SolveSteps } from './SolveSteps';
@@ -50,6 +50,24 @@ export const Result = ({
   const [comment, setComment] = useState<'idle' | 'posting' | 'posted'>(
     commented ? 'posted' : 'idle'
   );
+
+  // The player's snoovatar for their detective card. Loaded after the
+  // reveal so it never slows the game down; the card works without it.
+  const [avatar, setAvatar] = useState<{
+    username: string | null;
+    url: string | null;
+  } | null>(null);
+  useEffect(() => {
+    let live = true;
+    void fetchAvatar().then((a) => {
+      if (live && a) {
+        setAvatar({ username: a.username, url: a.url });
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const [join, setJoin] = useState<'idle' | 'joining' | 'joined'>(() =>
     hasJoined() ? 'joined' : 'idle'
@@ -211,20 +229,39 @@ export const Result = ({
 
         {result.streak && (
           <section className="sticker-sm flex w-full items-center gap-2.5 rounded-2xl bg-white px-3 py-2">
-            <span
-              className="rounded-md border-2 border-ink px-2 py-0.5 text-[13px] font-bold whitespace-nowrap"
-              style={{
-                background: badge.background,
-                color: badge.textColor === 'light' ? '#ffffff' : '#141414',
-              }}
-            >
-              {badge.text}
-            </span>
-            <span className="text-[12.5px] leading-tight text-ink-soft">
-              Your badge, shown next to your name here.
-              {next
-                ? ` ${next.daysToGo} more day${next.daysToGo === 1 ? '' : 's'} to ${next.title}.`
-                : ' Top rank!'}
+            {avatar?.url && (
+              <span className="pop flex h-[84px] w-[64px] shrink-0 items-end justify-center overflow-hidden rounded-xl border-2 border-ink bg-mint">
+                <img
+                  src={avatar.url}
+                  alt=""
+                  className="h-[80px] w-auto object-contain"
+                  onError={() =>
+                    setAvatar((a) => (a ? { ...a, url: null } : a))
+                  }
+                />
+              </span>
+            )}
+            <span className="flex min-w-0 flex-col items-start gap-1">
+              {avatar?.username && (
+                <span className="max-w-full truncate text-[13px] font-bold">
+                  Detective u/{avatar.username}
+                </span>
+              )}
+              <span
+                className="rounded-md border-2 border-ink px-2 py-0.5 text-[13px] font-bold whitespace-nowrap"
+                style={{
+                  background: badge.background,
+                  color: badge.textColor === 'light' ? '#ffffff' : '#141414',
+                }}
+              >
+                {badge.text}
+              </span>
+              <span className="text-[12.5px] leading-tight text-ink-soft">
+                Your badge, shown next to your name here.
+                {next
+                  ? ` ${next.daysToGo} more day${next.daysToGo === 1 ? '' : 's'} to ${next.title}.`
+                  : ' Top rank!'}
+              </span>
             </span>
           </section>
         )}

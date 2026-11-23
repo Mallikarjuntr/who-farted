@@ -1,6 +1,7 @@
 import type {
   AccuseRequest,
   AccuseResponse,
+  AvatarResponse,
   CaseResponse,
   CommentResponse,
   ErrorResponse,
@@ -77,4 +78,15 @@ export async function postJoin(): Promise<JoinResponse> {
     throw new Error(isError(data) ? data.message : `HTTP ${res.status}`);
   }
   return data;
+}
+
+/** The player's snoovatar, or null. Never throws: the card works without it. */
+export async function fetchAvatar(): Promise<AvatarResponse | null> {
+  try {
+    const res = await fetch('/api/avatar');
+    const data: AvatarResponse | ErrorResponse = await res.json();
+    return res.ok && !isError(data) ? data : null;
+  } catch {
+    return null;
+  }
 }

@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { context, reddit } from '@devvit/web/server';
 import type {
   AccuseResponse,
+  AvatarResponse,
   CaseResponse,
   CommentResponse,
   ErrorResponse,
@@ -169,5 +170,24 @@ api.post('/join', async (c) => {
       { type: 'error', message: 'Could not join right now.' },
       500
     );
+  }
+});
+
+/**
+ * The player's snoovatar for the result card. Asked for only after a guess,
+ * so it never slows down opening the case.
+ */
+api.get('/avatar', async (c) => {
+  const username = context.username ?? null;
+  if (!username) {
+    return c.json<AvatarResponse>({ type: 'avatar', username, url: null });
+  }
+  try {
+    const url = (await reddit.getSnoovatarUrl(username)) ?? null;
+    return c.json<AvatarResponse>({ type: 'avatar', username, url });
+  } catch (error) {
+    // An avatar is a nice extra; never let it break the result card.
+    console.error('GET /api/avatar failed', error);
+    return c.json<AvatarResponse>({ type: 'avatar', username, url: null });
   }
 });

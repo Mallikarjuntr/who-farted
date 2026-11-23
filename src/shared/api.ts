@@ -64,4 +64,11 @@ export type ResetResponse = { type: 'reset' };
 
 export type JoinResponse = { type: 'join' };
 
+/** The player's Reddit avatar (snoovatar), when they have one. */
+export type AvatarResponse = {
+  type: 'avatar';
+  username: string | null;
+  url: string | null;
+};
+
 export type ErrorResponse = { type: 'error'; message: string };

@@ -14,6 +14,16 @@ let c = generateCase(date);
 // day: no test bar, no streak, no results from yesterday.
 const newPlayer = process.env['NEW_PLAYER'] === '1';
 
+/** A stand-in for a real snoovatar: tall, transparent, full body. */
+const MOCK_AVATAR = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 600">
+<ellipse cx="190" cy="430" rx="95" ry="120" fill="#FF4500"/>
+<ellipse cx="190" cy="240" rx="130" ry="105" fill="#fff" stroke="#141414" stroke-width="8"/>
+<circle cx="145" cy="235" r="18" fill="#FF4500"/><circle cx="235" cy="235" r="18" fill="#FF4500"/>
+<path d="M140 285 Q190 315 240 285" fill="none" stroke="#141414" stroke-width="8"/>
+<line x1="190" y1="135" x2="215" y2="70" stroke="#141414" stroke-width="8"/>
+<circle cx="222" cy="60" r="18" fill="#fff" stroke="#141414" stroke-width="8"/>
+</svg>`;
+
 const TYPES: Record<string, string> = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -89,6 +99,21 @@ createServer(async (req, res) => {
     res
       .writeHead(200, { 'Content-Type': 'application/json' })
       .end(JSON.stringify({ type: 'accuse', result }));
+    return;
+  }
+  // NO_AVATAR=1 shows the card for a player without a snoovatar.
+  if (url.pathname === '/api/avatar') {
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(
+      JSON.stringify({
+        type: 'avatar',
+        username: 'local_tester',
+        url: process.env['NO_AVATAR'] === '1' ? null : '/mock-avatar.svg',
+      })
+    );
+    return;
+  }
+  if (url.pathname === '/mock-avatar.svg') {
+    res.writeHead(200, { 'Content-Type': 'image/svg+xml' }).end(MOCK_AVATAR);
     return;
   }
   if (url.pathname === '/api/join' && req.method === 'POST') {
