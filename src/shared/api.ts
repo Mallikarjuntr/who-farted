@@ -64,6 +64,22 @@ export type ResetResponse = { type: 'reset' };
 
 export type JoinResponse = { type: 'join' };
 
+/** One row of a leaderboard. `value` is seconds (today) or days (streaks). */
+export type BoardRow = { rank: number; username: string; value: number };
+
+export type LeaderboardResponse = {
+  type: 'leaderboard';
+  username: string | null;
+  /** Fastest right guesses on this case, quickest first. */
+  today: BoardRow[];
+  /** How many people guessed right on this case. */
+  todayCount: number;
+  /** The player's own row on today's board, if they guessed right. */
+  me: BoardRow | null;
+  /** Longest streaks that are still alive, longest first. */
+  streaks: BoardRow[];
+};
+
 /** The player's Reddit avatar (snoovatar), when they have one. */
 export type AvatarResponse = {
   type: 'avatar';

@@ -10,6 +10,7 @@ import { trackAction } from '../lib/analytics';
 import { fetchAvatar, postComment, postJoin } from '../lib/api';
 import { formatTime, hasJoined, markJoined, untilNextCase } from '../lib/util';
 import { Burst } from './Burst';
+import { Leaderboard } from './Leaderboard';
 import { SolveSteps } from './SolveSteps';
 import { Suspect } from './Suspect';
 
@@ -336,6 +337,12 @@ export const Result = ({
             </p>
           </section>
         )}
+
+        <Leaderboard
+          date={c.id}
+          myStreak={result.streak?.current ?? null}
+          ready={!pending}
+        />
 
         <section className="w-full rounded-2xl border-2 border-dashed border-ink bg-white/80 px-3 py-2">
           <p className="m-0 text-[11px] font-bold text-ink-soft">

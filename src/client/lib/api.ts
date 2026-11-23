@@ -6,6 +6,7 @@ import type {
   CommentResponse,
   ErrorResponse,
   JoinResponse,
+  LeaderboardResponse,
   ResetResponse,
 } from '../../shared/api';
 
@@ -85,6 +86,23 @@ export async function fetchAvatar(): Promise<AvatarResponse | null> {
   try {
     const res = await fetch('/api/avatar');
     const data: AvatarResponse | ErrorResponse = await res.json();
+    return res.ok && !isError(data) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The leaderboards, or null. Never throws: the card works without them. */
+export async function fetchLeaderboard(
+  date?: string | null
+): Promise<LeaderboardResponse | null> {
+  try {
+    const res = await fetch(
+      date
+        ? `/api/leaderboard?date=${encodeURIComponent(date)}`
+        : '/api/leaderboard'
+    );
+    const data: LeaderboardResponse | ErrorResponse = await res.json();
     return res.ok && !isError(data) ? data : null;
   } catch {
     return null;

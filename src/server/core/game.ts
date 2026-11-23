@@ -3,6 +3,7 @@ import type {
   AccuseRequest,
   AccuseResult,
   BlameRow,
+  LeaderboardResponse,
   Streak,
   YesterdaySummary,
 } from '../../shared/api.ts';
@@ -100,6 +101,12 @@ const keys = {
   blame: (date: string) => `blame:${date}`,
   streak: (userId: string) => `streak:${userId}`,
   commented: (date: string) => `commented:${date}`,
+  /** Sorted set: username → seconds, right guesses only. */
+  fast: (date: string) => `fast:${date}`,
+  /** Sorted set: username → current streak. */
+  streakBoard: 'board:streak',
+  /** Hash: username → date of their last guess, to hide broken streaks. */
+  streakLast: 'board:streak-last',
 };
 
 export async function readBlame(
@@ -264,9 +271,86 @@ export async function accuse(
   }
   await redis.hIncrBy(keys.blame(date), play.guessed, 1);
   const streak = await bumpStreak(userId, date, play.correct);
-  await updateStreakFlair(streak.current);
+  await Promise.all([
+    updateStreakFlair(streak.current),
+    updateBoards(date, play, streak),
+  ]);
   const blame = await readBlame(date);
   return { ...play, blame: blame.rows, totalPlayers: blame.total, streak };
+}
+
+/** Puts the player on today's fastest board and the streak board. */
+async function updateBoards(
+  date: string,
+  play: StoredPlay,
+  streak: Streak
+): Promise<void> {
+  const { username } = context;
+  if (!username) {
+    return;
+  }
+  try {
+    await Promise.all([
+      play.correct
+        ? redis.zAdd(keys.fast(date), { member: username, score: play.seconds })
+        : Promise.resolve(0),
+      streak.current > 0
+        ? redis.zAdd(keys.streakBoard, {
+            member: username,
+            score: streak.current,
+          })
+        : redis.zRem(keys.streakBoard, [username]),
+      redis.hSet(keys.streakLast, { [username]: date }),
+    ]);
+  } catch (error) {
+    // The boards are a bonus; never let them break the game.
+    console.error('Could not update leaderboards', error);
+  }
+}
+
+const BOARD_SIZE = 5;
+
+/** Today's fastest right guesses and the longest streaks still going. */
+export async function readLeaderboard(
+  date: string
+): Promise<LeaderboardResponse> {
+  const username = context.username ?? null;
+  const [fast, todayCount, myRank, myTime, streakTop] = await Promise.all([
+    redis.zRange(keys.fast(date), 0, BOARD_SIZE - 1, { by: 'rank' }),
+    redis.zCard(keys.fast(date)),
+    username ? redis.zRank(keys.fast(date), username) : undefined,
+    username ? redis.zScore(keys.fast(date), username) : undefined,
+    // Read extra rows: some streaks may have ended by skipping a day.
+    redis.zRange(keys.streakBoard, 0, 39, { by: 'rank', reverse: true }),
+  ]);
+  const lasts =
+    streakTop.length > 0
+      ? await redis.hMGet(
+          keys.streakLast,
+          streakTop.map((m) => m.member)
+        )
+      : [];
+  // A streak is alive if the player guessed today or yesterday.
+  const yesterday = shiftDate(date, -1);
+  const streaks = streakTop
+    .filter((_, i) => (lasts[i] ?? '') >= yesterday)
+    .slice(0, BOARD_SIZE)
+    .map((m, i) => ({ rank: i + 1, username: m.member, value: m.score }));
+  return {
+    type: 'leaderboard',
+    username,
+    today: fast.map((m, i) => ({
+      rank: i + 1,
+      username: m.member,
+      value: m.score,
+    })),
+    todayCount,
+    me:
+      username && myRank !== undefined && myTime !== undefined
+        ? { rank: myRank + 1, username, value: myTime }
+        : null,
+    streaks,
+  };
 }
 
 /** Shows the player's streak title next to their name in this subreddit. */
@@ -327,6 +411,9 @@ export async function resetPlay(
   }
   await redis.hDel(keys.played(date), [userId]);
   await redis.hDel(keys.commented(date), [userId]);
+  if (context.username) {
+    await redis.zRem(keys.fast(date), [context.username]);
+  }
   const count = await redis.hIncrBy(keys.blame(date), play.guessed, -1);
   if (count < 0) {
     await redis.hSet(keys.blame(date), { [play.guessed]: '0' });

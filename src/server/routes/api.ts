@@ -7,6 +7,7 @@ import type {
   CommentResponse,
   ErrorResponse,
   JoinResponse,
+  LeaderboardResponse,
   ResetResponse,
 } from '../../shared/api.ts';
 import { toPublicCase } from '../../shared/puzzle/generator.ts';
@@ -18,6 +19,7 @@ import {
   isSuspectId,
   isTestMode,
   readBlame,
+  readLeaderboard,
   readResult,
   postVerdictComment,
   readStreak,
@@ -189,5 +191,19 @@ api.get('/avatar', async (c) => {
     // An avatar is a nice extra; never let it break the result card.
     console.error('GET /api/avatar failed', error);
     return c.json<AvatarResponse>({ type: 'avatar', username, url: null });
+  }
+});
+
+/** Today's fastest sniffers and the longest streaks. Asked for after a guess. */
+api.get('/leaderboard', async (c) => {
+  try {
+    const date = await resolveCaseDate(c.req.query('date'));
+    return c.json<LeaderboardResponse>(await readLeaderboard(date));
+  } catch (error) {
+    console.error('GET /api/leaderboard failed', error);
+    return c.json<ErrorResponse>(
+      { type: 'error', message: 'Could not load the leaderboard.' },
+      500
+    );
   }
 });

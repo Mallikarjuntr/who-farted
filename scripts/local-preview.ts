@@ -101,6 +101,48 @@ createServer(async (req, res) => {
       .end(JSON.stringify({ type: 'accuse', result }));
     return;
   }
+  // EMPTY_BOARD=1 shows the boards on a day nobody has played yet.
+  if (url.pathname === '/api/leaderboard') {
+    const empty = process.env['EMPTY_BOARD'] === '1';
+    const names = [
+      'nose_knows',
+      'beanqueen',
+      'sherlock_smells',
+      'gas_detective',
+      'pipfan99',
+    ];
+    const today = empty
+      ? []
+      : names.map((username, i) => ({
+          rank: i + 1,
+          username,
+          value: 31 + i * 17,
+        }));
+    const me =
+      result && result.correct
+        ? { rank: 7, username: 'local_tester', value: result.seconds }
+        : null;
+    const streaks = empty
+      ? []
+      : [
+          { rank: 1, username: 'sherlock_smells', value: 12 },
+          { rank: 2, username: 'local_tester', value: 7 },
+          { rank: 3, username: 'beanqueen', value: 4 },
+          { rank: 4, username: 'nose_knows', value: 2 },
+          { rank: 5, username: 'a_really_long_reddit_username_here', value: 1 },
+        ];
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(
+      JSON.stringify({
+        type: 'leaderboard',
+        username: 'local_tester',
+        today,
+        todayCount: empty ? (me ? 1 : 0) : 9,
+        me,
+        streaks,
+      })
+    );
+    return;
+  }
   // NO_AVATAR=1 shows the card for a player without a snoovatar.
   if (url.pathname === '/api/avatar') {
     res.writeHead(200, { 'Content-Type': 'application/json' }).end(
