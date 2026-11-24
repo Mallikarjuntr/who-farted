@@ -245,7 +245,7 @@ export const Result = ({
             <span className="flex min-w-0 flex-col items-start gap-1">
               {avatar?.username && (
                 <span className="max-w-full truncate text-[13px] font-bold">
-                  Detective u/{avatar.username}
+                  u/{avatar.username}
                 </span>
               )}
               <span
