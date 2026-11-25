@@ -1,6 +1,6 @@
 import { navigateTo, showToast } from '@devvit/web/client';
 import { useEffect, useMemo, useState } from 'react';
-import type { AccuseResult } from '../../shared/api';
+import type { AccuseResult, Streak } from '../../shared/api';
 import type { PublicCase } from '../../shared/puzzle/types';
 import { CAST, FOODS } from '../../shared/puzzle/cast';
 import { FOOD_COLORS, confession } from '../lib/clues';
@@ -22,6 +22,11 @@ type Props = {
   pending?: boolean;
   /** Where the game is played; shows a join button when known. */
   subredditName?: string | null;
+  /**
+   * The player's streak today, for their badge. On an older case the result's
+   * own streak is the one from that day, so the badge needs today's.
+   */
+  badgeStreak?: Streak | null;
 };
 
 function burstPath(): string {
@@ -45,9 +50,11 @@ export const Result = ({
   commented,
   pending = false,
   subredditName = null,
+  badgeStreak = null,
 }: Props) => {
-  const badge = badgeFor(result.streak?.current ?? 0);
-  const next = nextBadge(result.streak?.current ?? 0);
+  const nowStreak = badgeStreak ?? result.streak;
+  const badge = badgeFor(nowStreak?.current ?? 0);
+  const next = nextBadge(nowStreak?.current ?? 0);
   const [comment, setComment] = useState<'idle' | 'posting' | 'posted'>(
     commented ? 'posted' : 'idle'
   );
@@ -228,7 +235,7 @@ export const Result = ({
           </div>
         </div>
 
-        {result.streak && (
+        {nowStreak && (
           <section className="sticker-sm flex w-full items-center gap-2.5 rounded-2xl bg-white px-3 py-2">
             {avatar?.url && (
               <span className="pop flex h-[84px] w-[64px] shrink-0 items-end justify-center overflow-hidden rounded-xl border-2 border-ink bg-mint">
@@ -340,7 +347,7 @@ export const Result = ({
 
         <Leaderboard
           date={c.id}
-          myStreak={result.streak?.current ?? null}
+          myStreak={nowStreak?.current ?? null}
           ready={!pending}
         />
 

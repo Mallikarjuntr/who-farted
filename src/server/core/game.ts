@@ -12,17 +12,14 @@ import { SUSPECT_IDS } from '../../shared/puzzle/cast.ts';
 import { generateCase } from '../../shared/puzzle/generator.ts';
 import { badgeFor } from '../../shared/badges.ts';
 import { verdictFor } from '../../shared/verdict.ts';
+import { shiftDate, streakOn } from './days.ts';
+
+export { shiftDate };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-export function shiftDate(date: string, days: number): string {
-  return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000)
-    .toISOString()
-    .slice(0, 10);
 }
 
 /** Each post carries the date of its case; old posts keep showing their own case. */
@@ -122,7 +119,8 @@ export async function readBlame(
       total += count;
     }
   }
-  rows.sort((a, b) => b.count - a.count);
+  // Ties are broken by name so the same suspect always comes first.
+  rows.sort((a, b) => b.count - a.count || a.id.localeCompare(b.id));
   return { rows, total };
 }
 
@@ -193,11 +191,28 @@ export async function readResult(
   if (!play) {
     return null;
   }
-  const [blame, streak] = await Promise.all([
+  const [blame, streak, last] = await Promise.all([
     readBlame(date),
     readStreak(userId),
+    redis.hGet(keys.streak(userId), 'last'),
   ]);
-  return { ...play, blame: blame.rows, totalPlayers: blame.total, streak };
+  // The stored streak is the one after the player's latest guess. For an
+  // older case, work out the streak the player had on that day instead.
+  const onThatDay =
+    streak && last !== date
+      ? {
+          ...streak,
+          current: await streakOn(date, play.correct, async (d) =>
+            parsePlay(await redis.hGet(keys.played(d), userId))
+          ),
+        }
+      : streak;
+  return {
+    ...play,
+    blame: blame.rows,
+    totalPlayers: blame.total,
+    streak: onThatDay,
+  };
 }
 
 async function bumpStreak(

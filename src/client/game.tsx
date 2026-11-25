@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { AccuseResult, CaseResponse } from '../shared/api';
+import type { AccuseResult, CaseResponse, Streak } from '../shared/api';
 import type { PublicCase, Statement, SuspectId } from '../shared/puzzle/types';
 import { CAST } from '../shared/puzzle/cast';
 import {
@@ -174,6 +174,8 @@ type GameProps = {
   commented?: boolean;
   /** Where the game is played, for the join button on the result screen. */
   subredditName?: string | null;
+  /** The player's streak right now, for their badge on an older case. */
+  currentStreak?: Streak | null;
 };
 
 const Game = ({
@@ -184,6 +186,7 @@ const Game = ({
   onPracticeRetry,
   commented = false,
   subredditName = null,
+  currentStreak = null,
 }: GameProps) => {
   const analysis = useMemo(() => analyzeCase(c), [c]);
   const indexOf = useCallback(
@@ -494,6 +497,7 @@ const Game = ({
         commented={commented}
         pending={pending}
         subredditName={subredditName}
+        badgeStreak={result === initialResult ? currentStreak : null}
       />
     );
   }
@@ -1000,6 +1004,7 @@ export const App = () => {
         initialResult={data.result}
         commented={data.commented}
         subredditName={data.subredditName}
+        currentStreak={data.streak}
       />
     </>
   );

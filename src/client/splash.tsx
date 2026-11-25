@@ -161,8 +161,11 @@ export const Splash = () => {
               {formatTime(result.seconds)}.
               <br />
               <strong>
-                {result.correct && data?.streak && data.streak.current > 0
-                  ? `${data.streak.current}-day streak. Keep it going!`
+                {result.correct &&
+                result.streak &&
+                result.streak.current > 0 &&
+                result.streak.current === data?.streak?.current
+                  ? `${result.streak.current}-day streak. Keep it going!`
                   : `New case in ${untilNextCase()}. Come back!`}
               </strong>
             </p>
