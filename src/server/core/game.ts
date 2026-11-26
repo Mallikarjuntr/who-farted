@@ -463,9 +463,69 @@ export function verdictText(
 
 export type CommentOutcome = 'posted' | 'already' | 'not-played' | 'no-user';
 
+/** post id -> id of that post's pinned "verdicts" comment. */
+const VERDICT_THREADS = 'verdict-threads';
+const THREAD_PENDING = 'pending';
+
+export const VERDICT_THREAD_TEXT = [
+  '🕵️ **VERDICTS GO HERE**',
+  'Results posted from the game land as replies to this comment, so the thread below stays free for theories and banter.',
+  'Know who did it? Keep it secret: `>!it was Brock!<`',
+].join('\n\n');
+
+function isCommentId(id: string | undefined): id is `t1_${string}` {
+  return typeof id === 'string' && id.startsWith('t1_');
+}
+
+const pause = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 /**
- * Posts the player's verdict as a comment on the case post. Only ever called
- * from an explicit button press; one comment per player per case.
+ * The one comment, pinned by the app, that every verdict replies to. Devvit's
+ * rules ask for score comments to collect under a single stickied comment so
+ * they never crowd out real discussion. Made with the daily post, or the first
+ * time someone posts a verdict on an older case.
+ */
+export async function verdictThread(
+  postId: `t3_${string}`
+): Promise<`t1_${string}`> {
+  const claimed = await redis.hSetNX(VERDICT_THREADS, postId, THREAD_PENDING);
+  if (!claimed) {
+    // Someone else is making it right now: wait a moment for their id.
+    for (let i = 0; i < 10; i++) {
+      const existing = await redis.hGet(VERDICT_THREADS, postId);
+      if (isCommentId(existing)) {
+        return existing;
+      }
+      if (existing !== THREAD_PENDING) {
+        break;
+      }
+      await pause(300);
+    }
+  }
+  try {
+    const comment = await reddit.submitComment({
+      id: postId,
+      text: VERDICT_THREAD_TEXT,
+      runAs: 'APP',
+    });
+    await redis.hSet(VERDICT_THREADS, { [postId]: comment.id });
+    try {
+      await comment.distinguish(true);
+    } catch (error) {
+      // Still works as a thread; it just isn't pinned to the top.
+      console.error('Could not pin the verdicts comment', error);
+    }
+    return comment.id;
+  } catch (error) {
+    await redis.hDel(VERDICT_THREADS, [postId]);
+    throw error;
+  }
+}
+
+/**
+ * Posts the player's verdict as a reply to the case's pinned verdicts comment.
+ * Only ever called from an explicit button press; one per player per case.
  */
 export async function postVerdictComment(
   date: string
@@ -484,8 +544,9 @@ export async function postVerdictComment(
   }
   try {
     const c = getCase(date);
+    const thread = await verdictThread(postId);
     const comment = await reddit.submitComment({
-      id: postId,
+      id: thread,
       text: verdictText(c, result),
       runAs: 'USER',
     });

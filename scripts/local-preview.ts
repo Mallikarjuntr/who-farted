@@ -66,6 +66,10 @@ createServer(async (req, res) => {
       commented: false,
       subredditName: 'WhoFartedDaily',
       returning: !newPlayer,
+      // OLD_CASE=1 previews an old case post with the link to today's case.
+      today: process.env.OLD_CASE
+        ? { number: c.number + 3, url: 'https://www.reddit.com/r/WhoFartedDaily/' }
+        : null,
     };
     res
       .writeHead(200, { 'Content-Type': 'application/json' })

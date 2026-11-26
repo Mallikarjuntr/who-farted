@@ -1,6 +1,6 @@
 import { navigateTo, showToast } from '@devvit/web/client';
 import { useEffect, useMemo, useState } from 'react';
-import type { AccuseResult, Streak } from '../../shared/api';
+import type { AccuseResult, Streak, TodayCase } from '../../shared/api';
 import type { PublicCase } from '../../shared/puzzle/types';
 import { CAST, FOODS } from '../../shared/puzzle/cast';
 import { FOOD_COLORS, confession } from '../lib/clues';
@@ -27,6 +27,8 @@ type Props = {
    * own streak is the one from that day, so the badge needs today's.
    */
   badgeStreak?: Streak | null;
+  /** On an older case post: today's case, offered as the next step. */
+  today?: TodayCase | null;
 };
 
 function burstPath(): string {
@@ -51,6 +53,7 @@ export const Result = ({
   pending = false,
   subredditName = null,
   badgeStreak = null,
+  today = null,
 }: Props) => {
   const nowStreak = badgeStreak ?? result.streak;
   const badge = badgeFor(nowStreak?.current ?? 0);
@@ -106,7 +109,7 @@ export const Result = ({
       await postComment(c.id);
       setComment('posted');
       trackAction('post_verdict');
-      showToast('Verdict posted! Scroll down to see it in the comments.');
+      showToast('Verdict posted! It’s under the pinned VERDICTS comment.');
     } catch (err) {
       setComment('idle');
       showToast(
@@ -140,7 +143,7 @@ export const Result = ({
   const copyVerdict = async () => {
     try {
       await navigator.clipboard.writeText(verdict);
-      showToast('Verdict copied. Paste it in the comments!');
+      showToast('Verdict copied. Paste it with your own message!');
     } catch {
       showToast('Could not copy. Long-press the text to copy it.');
     }
@@ -152,6 +155,16 @@ export const Result = ({
         <span className="sticker-sm rounded-md bg-white px-2 py-0.5 text-[12px] font-bold">
           CASE #{c.number} · FLOOR {c.floor} · CLOSED
         </span>
+        {today && (
+          <button
+            type="button"
+            className="btn tap w-full rounded-xl bg-mint px-3 py-2 text-[14px] leading-tight font-bold"
+            onClick={() => navigateTo(today.url)}
+          >
+            This case is from the archive.{' '}
+            <span className="underline">Today’s case #{today.number} is live →</span>
+          </button>
+        )}
         <h1 className="logo pop m-0 -rotate-3 text-center text-[52px] leading-none">
           {result.correct ? 'GOTCHA!' : 'WRONG GUESS!'}
         </h1>
@@ -394,8 +407,8 @@ export const Result = ({
         </button>
         <p className="m-0 -mt-1 text-center text-[12.5px] text-ink-soft">
           {comment === 'posted'
-            ? 'Your verdict is in the comments below. No spoilers.'
-            : 'Posts this as a comment on today’s case. No spoilers.'}{' '}
+            ? 'Your verdict is under the pinned VERDICTS comment. No spoilers.'
+            : 'Posts this under the pinned VERDICTS comment. No spoilers.'}{' '}
           <button
             type="button"
             className="tap border-0 bg-transparent p-0 text-[12.5px] font-bold text-ink underline"

@@ -1,12 +1,13 @@
 import './index.css';
 
-import { requestExpandedMode } from '@devvit/web/client';
+import { navigateTo, requestExpandedMode } from '@devvit/web/client';
 import { StrictMode, useEffect, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { CaseResponse } from '../shared/api';
 import type { SuspectId } from '../shared/puzzle/types';
 import { CAST } from '../shared/puzzle/cast';
+import { MADE_BY } from '../shared/credits';
 import { Suspect } from './components/Suspect';
 import { fetchCase } from './lib/api';
 import {
@@ -79,6 +80,7 @@ export const Splash = () => {
   const talker = c ? c.suspects[c.number % c.suspects.length]?.id : undefined;
   const result = data?.result;
   const yesterday = data?.yesterday;
+  const today = data?.today ?? null;
 
   return (
     <div className="halftone h-full w-full overflow-hidden select-none">
@@ -99,6 +101,9 @@ export const Splash = () => {
         <h1 className="logo m-0 -rotate-2 text-center text-[clamp(30px,9vh,48px)] leading-none">
           WHO FARTED?
         </h1>
+        <p className="m-0 -mt-1 text-[11px] leading-none font-semibold text-ink-soft">
+          A daily lift mystery by {MADE_BY}
+        </p>
 
         <div className="sticker w-full max-w-[340px] flex-1 rounded-2xl bg-lift px-2 pt-1 pb-1">
           <div className="grid h-full grid-cols-3 grid-rows-2 place-items-center gap-x-1">
@@ -155,6 +160,16 @@ export const Splash = () => {
             <p className="m-0 text-[13px] font-medium">
               The lift is stuck. Pull to refresh.
             </p>
+          ) : today ? (
+            <button
+              type="button"
+              className="sticker-sm tap m-0 -rotate-2 bg-mint px-2 py-1 text-left text-[12.5px] leading-tight font-medium"
+              onClick={() => navigateTo(today.url)}
+            >
+              From the case archive.
+              <br />
+              <strong>Today’s case is #{today.number} →</strong>
+            </button>
           ) : result ? (
             <p className="sticker-sm m-0 -rotate-2 bg-white px-2 py-1 text-[12.5px] leading-tight font-medium">
               {result.correct ? 'You cracked it in ' : 'It got away in '}

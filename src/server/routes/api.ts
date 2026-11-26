@@ -7,6 +7,7 @@ import type {
   CommentResponse,
   ErrorResponse,
   JoinResponse,
+  TodayCase,
   LeaderboardResponse,
   ResetResponse,
 } from '../../shared/api.ts';
@@ -25,15 +26,42 @@ import {
   readStreak,
   resetPlay,
   resolveCaseDate,
+  todayUtc,
   yesterdaySummary,
 } from '../core/game.ts';
+import { dailyPostId } from '../core/daily.ts';
 
 export const api = new Hono();
+
+/**
+ * Old case posts stay playable forever. When someone opens one (a judge
+ * following an old link, say), point them at today's case as well.
+ */
+async function todaysCase(date: string): Promise<TodayCase | null> {
+  const today = todayUtc();
+  if (date >= today) {
+    return null;
+  }
+  try {
+    const postId = await dailyPostId(today);
+    if (!postId || postId === context.postId) {
+      return null;
+    }
+    const sub = context.subredditName ?? 'WhoFartedDaily';
+    return {
+      number: getCase(today).number,
+      url: `https://www.reddit.com/r/${sub}/comments/${postId.slice(3)}/`,
+    };
+  } catch (error) {
+    console.error('Could not find today’s case post', error);
+    return null;
+  }
+}
 
 api.get('/case', async (c) => {
   try {
     const date = await resolveCaseDate(c.req.query('date'));
-    const [result, streak, yesterday, blame, commented, returning] =
+    const [result, streak, yesterday, blame, commented, returning, today] =
       await Promise.all([
         readResult(date, context.userId),
         readStreak(context.userId),
@@ -41,6 +69,7 @@ api.get('/case', async (c) => {
         readBlame(date),
         hasCommented(date, context.userId),
         hasPlayedBefore(context.userId),
+        todaysCase(date),
       ]);
     return c.json<CaseResponse>({
       type: 'case',
@@ -54,6 +83,7 @@ api.get('/case', async (c) => {
       commented,
       subredditName: context.subredditName ?? null,
       returning,
+      today,
     });
   } catch (error) {
     console.error('GET /api/case failed', error);

@@ -1,6 +1,6 @@
 import { reddit, redis } from '@devvit/web/server';
 import { createCasePost } from './post.ts';
-import { shiftDate, todayUtc } from './game.ts';
+import { shiftDate, todayUtc, verdictThread } from './game.ts';
 
 /** date -> post id of that day's case post, one per subreddit installation. */
 const DAILY_POSTS = 'daily-posts';
@@ -29,6 +29,7 @@ export async function postDailyCase(
     const post = await createCasePost(date);
     await redis.hSet(DAILY_POSTS, { [date]: post.id });
     await pinNewest(post.id, date);
+    await openVerdictThread(post.id);
     return { status: 'created', postId: post.id };
   } catch (error) {
     // Let a later run try again instead of leaving the day stuck as "pending".
@@ -39,6 +40,27 @@ export async function postDailyCase(
 
 function isPostId(id: string | undefined): id is `t3_${string}` {
   return typeof id === 'string' && id.startsWith('t3_');
+}
+
+/** The post id of the case for `date`, once it has been posted. */
+export async function dailyPostId(
+  date: string
+): Promise<`t3_${string}` | null> {
+  const id = await redis.hGet(DAILY_POSTS, date);
+  return isPostId(id) ? id : null;
+}
+
+/** Pins the verdicts comment from the start, so the first verdict has a home. */
+async function openVerdictThread(postId: string): Promise<void> {
+  if (!isPostId(postId)) {
+    return;
+  }
+  try {
+    await verdictThread(postId);
+  } catch (error) {
+    // The first verdict will try again.
+    console.error('Could not open the verdicts thread', error);
+  }
 }
 
 async function pinNewest(postId: string, date: string): Promise<void> {

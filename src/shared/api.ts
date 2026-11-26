@@ -45,7 +45,11 @@ export type CaseResponse = {
   subredditName: string | null;
   /** True once this player has made a guess on any day, so the intro can be skipped. */
   returning: boolean;
+  /** On an older case post: today's case, so players can jump to it. */
+  today: TodayCase | null;
 };
+
+export type TodayCase = { number: number; url: string };
 
 export type AccuseRequest = {
   suspect: SuspectId;

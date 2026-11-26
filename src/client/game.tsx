@@ -9,7 +9,13 @@ import {
   useState,
 } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { AccuseResult, CaseResponse, Streak } from '../shared/api';
+import type {
+  AccuseResult,
+  CaseResponse,
+  Streak,
+  TodayCase,
+} from '../shared/api';
+import { MADE_BY } from '../shared/credits';
 import type { PublicCase, Statement, SuspectId } from '../shared/puzzle/types';
 import { CAST } from '../shared/puzzle/cast';
 import {
@@ -146,6 +152,9 @@ const Welcome = ({
       <p className="m-0 text-[16px] leading-snug font-medium">
         Someone farted in the lift. Read the clues. Find the farter.
       </p>
+      <p className="-mt-2 mb-0 text-[12px] font-semibold text-ink-soft">
+        A daily case by {MADE_BY}
+      </p>
       <button
         type="button"
         className="btn display w-full rounded-xl bg-tomato py-2.5 text-[22px]"
@@ -176,6 +185,8 @@ type GameProps = {
   subredditName?: string | null;
   /** The player's streak right now, for their badge on an older case. */
   currentStreak?: Streak | null;
+  /** On an older case post: today's case, to jump to from the result. */
+  today?: TodayCase | null;
 };
 
 const Game = ({
@@ -187,6 +198,7 @@ const Game = ({
   commented = false,
   subredditName = null,
   currentStreak = null,
+  today = null,
 }: GameProps) => {
   const analysis = useMemo(() => analyzeCase(c), [c]);
   const indexOf = useCallback(
@@ -498,6 +510,7 @@ const Game = ({
         pending={pending}
         subredditName={subredditName}
         badgeStreak={result === initialResult ? currentStreak : null}
+        today={today}
       />
     );
   }
@@ -1005,6 +1018,7 @@ export const App = () => {
         commented={data.commented}
         subredditName={data.subredditName}
         currentStreak={data.streak}
+        today={data.today ?? null}
       />
     </>
   );
